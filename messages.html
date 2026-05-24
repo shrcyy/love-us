@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言板 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html" class="active">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>留言板</h1>
+            <p class="subtitle">把想说的话，悄悄写在这里。</p>
+        </section>
+        <div style="text-align:center;margin-bottom:24px;">
+            <button class="btn btn-outline random-msg-btn fade-in" onclick="showRandomMessage()">💌 随机查看一条过往留言</button>
+        </div>
+        <div class="messages-grid fade-in" id="messagesGrid"></div>
+        <div class="message-form fade-in" style="margin-top:36px;">
+            <h3>写下你的心里话</h3>
+            <input type="text" id="msgSender" placeholder="你的名字（小宇 / 小云）" maxlength="20">
+            <input type="text" id="msgMood" placeholder="心情 emoji（如 💕）" maxlength="4">
+            <textarea id="msgContent" placeholder="想说的话..." maxlength="500"></textarea>
+            <button class="btn btn-primary" onclick="submitMessage()">发布留言</button>
+            <p style="font-size:0.78rem;color:var(--text-lighter);margin-top:8px;">留言会保存在本地浏览器中，只有你们能看到。</p>
+        </div>
+    </main>
+
+    <div class="random-msg-popup" id="randomMsgPopup">
+        <div class="popup-card" id="randomMsgCard"></div>
+    </div>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMessages();
+            addFAB(() => {
+                document.getElementById('msgSender').focus();
+                document.querySelector('.message-form').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        function getAllMessages() {
+            return [...APP_DATA.messages].sort((a,b) => new Date(b.time) - new Date(a.time));
+        }
+
+        function loadMessages() {
+            const messages = getAllMessages();
+            const grid = document.getElementById('messagesGrid');
+            grid.innerHTML = '';
+            messages.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'message-card';
+                card.innerHTML = `
+                    <div class="msg-mood">${m.mood}</div>
+                    <div class="msg-sender">${m.sender}</div>
+                    <div class="msg-content">${m.content}</div>
+                    <div class="msg-time">${m.time}</div>`;
+                card.appendChild(createCardActions(
+                    null,
+                    () => showConfirm('确定要删除这条留言吗？', () => deleteMessage(m.id))
+                ));
+                grid.appendChild(card);
+            });
+        }
+
+        function submitMessage() {
+            const sender = document.getElementById('msgSender').value.trim();
+            const mood = document.getElementById('msgMood').value.trim() || '💌';
+            const content = document.getElementById('msgContent').value.trim();
+            if (!sender || !content) { alert('请填写名字和留言内容哦~'); return; }
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            APP_DATA.messages.push({ id: generateId(APP_DATA.messages), sender, mood, content, time: timeStr });
+            saveData(APP_DATA);
+            document.getElementById('msgSender').value = '';
+            document.getElementById('msgMood').value = '';
+            document.getElementById('msgContent').value = '';
+            loadMessages();
+        }
+
+        function deleteMessage(id) {
+            APP_DATA.messages = APP_DATA.messages.filter(m => m.id !== id);
+            saveData(APP_DATA);
+            loadMessages();
+        }
+
+        function showRandomMessage() {
+            const messages = getAllMessages();
+            if (messages.length === 0) return;
+            const random = messages[Math.floor(Math.random() * messages.length)];
+            document.getElementById('randomMsgCard').innerHTML = `
+                <div style="font-size:3rem;margin-bottom:12px;">${random.mood}</div>
+                <div style="font-weight:600;color:var(--primary);margin-bottom:8px;">${random.sender}</div>
+                <div style="color:var(--text-light);line-height:1.8;margin-bottom:10px;">${random.content}</div>
+                <div style="font-size:0.82rem;color:var(--text-lighter);">${random.time}</div>
+                <button class="btn btn-outline btn-sm" style="margin-top:16px;" onclick="document.getElementById('randomMsgPopup').classList.remove('active')">关闭</button>`;
+            document.getElementById('randomMsgPopup').classList.add('active');
+        }
+
+        document.getElementById('randomMsgPopup').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+    </script>
+</body>
+</html>
