@@ -1,6 +1,6 @@
 # 💕 两人私密纪念网站
 
-一个温暖治愈的纯静态网站，为情侣/伴侣打造专属的二人秘密花园。无需服务器，无需数据库，所有数据存储在浏览器的 localStorage 中，支持公网免费部署。
+一个温暖治愈的纯静态网站，为情侣/伴侣打造专属的二人秘密花园。无需服务器，无需数据库，所有数据存储在浏览器的 localStorage 中，支持公网免费部署。**国内访问推荐使用 Cloudflare Pages，速度比 Vercel 更快。**
 
 ## 功能介绍
 
@@ -22,7 +22,8 @@
 - **数据导入导出**：支持 JSON 格式导出备份和导入恢复，跨设备迁移数据
 - **全站可编辑**：所有内容支持增删改，数据通过 localStorage 持久化
 - **温暖治愈系风格**：奶油色/暖粉配色，花瓣飘落动画，完全响应式设计
-- **零成本部署**：纯静态文件，可部署到 Vercel / Netlify / GitHub Pages 等平台
+- **性能优化**：CSS 压缩至 ~25KB，Leaflet 使用国内 CDN（bootcdn），CSS/JS 资源长期缓存
+- **零成本部署**：纯静态文件，可部署到 Cloudflare Pages / GitHub Pages / Netlify 等平台
 
 ## 如何使用
 
@@ -43,31 +44,36 @@
 
 进入"关于我们"页面的"分享 & 数据管理"区域，点击"复制链接"发给对方。TA 打开链接后进入同一个空间，所有内容自动同步（基于 localStorage）。
 
-## 如何部署到 Vercel
+## 如何部署到 Cloudflare Pages
 
-Vercel 提供免费的一键部署，支持自定义域名和 HTTPS。
+Cloudflare Pages 在国内的访问速度优于 Vercel，推荐国内用户使用。
 
 ### 第一步：准备代码
 
 将整个 `love-us/` 目录上传到你的 GitHub 仓库（公开或私有均可）。
 
-### 第二步：导入项目到 Vercel
+### 第二步：部署到 Cloudflare Pages
 
-1. 访问 [vercel.com](https://vercel.com) 并用 GitHub 账号注册/登录
-2. 点击「New Project」
-3. 导入你的 GitHub 仓库
-4. Vercel 会自动检测到 `vercel.json` 配置
-5. 直接点击「Deploy」即可
+1. 访问 [dash.cloudflare.com](https://dash.cloudflare.com) 并注册/登录
+2. 点击左侧「Workers & Pages」→ 选择「Pages」→ 点击「连接到 Git」
+3. 选择你的 GitHub 仓库，点击「开始设置」
+4. 构建设置：
+   - **构建命令**：留空（纯静态无需构建）
+   - **构建输出目录**：留空（项目根目录即站点根目录）
+   - 点击「保存并部署」
+5. 部署完成后，Cloudflare 会分配一个域名（如 `your-project.pages.dev`）
 
 ### 第三步：分享你的网站
 
-部署完成后 Vercel 会分配一个域名（如 `https://your-project.vercel.app`）。将链接分享给你的另一半即可。
+部署完成后即可通过 `https://your-project.pages.dev` 访问。将链接分享给你的另一半即可。
 
-### 部署到其他平台
+### 备选部署方案
 
-- **GitHub Pages**：将 `love-us/` 目录内容推送到 `gh-pages` 分支，在仓库 Settings 中启用 Pages
-- **Netlify**：拖拽 `love-us/` 文件夹到 Netlify 面板即可
-- **Cloudflare Pages**：连接 GitHub 仓库，构建输出目录设为 `.`
+| 平台 | 特点 | 部署方式 |
+|------|------|----------|
+| **GitHub Pages** | 最稳定，适合静态站点 | 推送到 `gh-pages` 分支，Settings 中启用 Pages |
+| **Netlify** | 简单易用 | 拖拽文件夹到 Netlify 面板 |
+| **Vercel** | 国际线路好 | 导入 GitHub 仓库一键部署 |
 
 ## 分享给其他情侣
 
@@ -78,10 +84,18 @@ Vercel 提供免费的一键部署，支持自定义域名和 HTTPS。
 ## 技术栈
 
 - 纯 HTML/CSS/JavaScript（零依赖框架）
-- Leaflet.js（地图，CDN 引入）
+- Leaflet.js（地图，bootcdn CDN 国内加速引入）
 - localStorage 数据持久化
 - Intersection Observer 渐入动画
 - 完全响应式设计（480/768/1024/1400px 断点）
+
+## 性能指标
+
+- 首屏加载总大小：~150KB（含 CSS + JS + HTML）
+- CSS 压缩：~25KB（原始 40KB 去重精简，gzip 后约 8KB）
+- JS 压缩：~15KB（data.js 6KB + main.js 9KB）
+- 静态资源强缓存：CSS/JS 缓存 1 年（`_headers` 配置）
+- Leaflet 从国内 CDN 加载，大幅减少延迟
 
 ## 项目结构
 
@@ -96,11 +110,11 @@ love-us/
 ├── map.html            # 我们的地图
 ├── about.html          # 关于我们
 ├── css/
-│   └── style.css       # 全局样式
+│   └── style.css       # 全局样式（~25KB）
 ├── js/
-│   ├── data.js         # 数据层（空间管理、导入导出、存储引擎）
-│   └── main.js         # 全局 UI 工具（导航、模态框、卡片操作、空间管理 UI）
-├── vercel.json         # Vercel 部署配置
+│   ├── data.js         # 数据层（空间管理、导入导出、存储引擎 ~6KB）
+│   └── main.js         # 全局 UI 工具（导航、模态框、卡片操作、空间管理 ~9KB）
+├── _headers            # Cloudflare Pages 缓存策略
 ├── .gitignore
 └── README.md
 ```
