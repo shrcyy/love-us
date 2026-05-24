@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我们 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html" class="active">关于我们</a></li>
+            </ul>
+            <div id="nav-space-name"></div>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>关于我们</h1>
+            <p class="subtitle">两个人的故事，从这里开始。</p>
+        </section>
+
+        <div class="about-cards fade-in" id="aboutCards"></div>
+
+        <section class="fade-in">
+            <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">我们的故事时间轴</h2>
+            <div class="story-timeline" id="storyTimeline"></div>
+        </section>
+
+        <section class="fade-in" style="margin-top:36px;">
+            <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">共同的爱好</h2>
+            <div class="hobby-cloud" id="hobbyCloud"></div>
+        </section>
+
+        <section class="fade-in" style="margin-top:36px;">
+            <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">有趣的小统计</h2>
+            <div class="stats-grid" id="statsGrid"></div>
+        </section>
+
+        <!-- 分享与数据管理 -->
+        <section class="fade-in" style="margin-top:48px; max-width:600px; margin-left:auto; margin-right:auto;">
+            <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">分享 & 数据管理</h2>
+
+            <div class="card" style="background:var(--secondary-light); padding:24px; margin-bottom:16px; text-align:center;">
+                <div style="font-size:1.1rem; color:var(--text); margin-bottom:8px;">📎 分享我们的空间</div>
+                <p style="color:var(--text-light); font-size:0.85rem; margin-bottom:12px;">复制链接发给你的另一半，TA 打开就进入同一个空间</p>
+                <div style="display:flex; gap:8px; justify-content:center;">
+                    <input type="text" id="shareLinkInput" readonly style="flex:1;max-width:360px;padding:8px 12px;border-radius:8px;border:1px solid var(--accent-light);background:var(--white);color:var(--text);font-size:0.85rem;">
+                    <button class="btn btn-primary" onclick="copyShareLink()" style="font-size:0.85rem;">复制链接</button>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button class="btn btn-outline" onclick="exportDataJSON()">📥 导出数据</button>
+                <button class="btn btn-outline" onclick="document.getElementById('importFileInput').click()">📤 导入数据</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImport(event)">
+            </div>
+
+            <div style="text-align:center; margin-top:16px;">
+                <button class="btn btn-outline" onclick="showSpaceSwitcher()">🔄 切换空间</button>
+                <button class="btn btn-outline" onclick="showCreateSpaceModal()">➕ 新建空间</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshAbout();
+            updateShareLink();
+            addFAB(function() { showEditAboutModal(); });
+        });
+
+        function updateShareLink() {
+            var hash = getSpaceHash();
+            var linkInput = document.getElementById('shareLink');
+            if (!linkInput) return;
+            var baseUrl = window.location.origin + window.location.pathname.replace(/about\.html$/, 'index.html');
+            var link = hash ? baseUrl + '#' + hash : baseUrl + '#' + 'lovestory' + Date.now().toString(36);
+            document.getElementById('shareLinkInput').value = link;
+        }
+
+        function copyShareLink() {
+            var input = document.getElementById('shareLinkInput');
+            input.select();
+            document.execCommand('copy');
+            alert('链接已复制！分享给你的另一半吧~');
+        }
+
+        function handleImport(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            if (!confirm('导入数据将覆盖当前空间的内容，确定继续吗？')) { event.target.value = ''; return; }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                if (importDataJSON(e.target.result)) {
+                    refreshAbout();
+                    alert('数据导入成功！');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function refreshAbout() {
+            var data = APP_DATA;
+
+            var cards = document.getElementById('aboutCards');
+            cards.innerHTML =
+                '<div class="profile-card">' +
+                '<div class="avatar">' + escapeHTML((data.person1.name || 'Y')[0]) + '</div>' +
+                '<div class="p-name">' + escapeHTML(data.person1.name || '小宇') + '</div>' +
+                '<div class="p-intro">' + escapeHTML(data.person1.intro || '') + '</div>' +
+                '</div>' +
+                '<div class="profile-card">' +
+                '<div class="avatar" style="background:linear-gradient(135deg,#FF9EA4,#FF8C94);">' + escapeHTML((data.person2.name || 'C')[0]) + '</div>' +
+                '<div class="p-name">' + escapeHTML(data.person2.name || '小云') + '</div>' +
+                '<div class="p-intro">' + escapeHTML(data.person2.intro || '') + '</div>' +
+                '</div>';
+
+            var storyContainer = document.getElementById('storyTimeline');
+            storyContainer.innerHTML = '';
+            (data.timelineNodes || []).forEach(function(s) {
+                var item = document.createElement('div');
+                item.className = 'story-item';
+                item.innerHTML =
+                    '<div class="story-date">' + formatDate(s.date) + '</div>' +
+                    '<div class="story-desc"><strong>' + escapeHTML(s.title) + '</strong>——' + escapeHTML(s.desc) + '</div>';
+                item.appendChild(createCardActions(
+                    function() { showEditStoryModal(s); },
+                    function() {
+                        showConfirm('确定要删除这个故事节点吗？', function() {
+                            APP_DATA.timelineNodes = APP_DATA.timelineNodes.filter(function(n) { return n.id !== s.id; });
+                            saveData(APP_DATA);
+                            refreshAbout();
+                        });
+                    }
+                ));
+                storyContainer.appendChild(item);
+            });
+
+            var hobbyCloud = document.getElementById('hobbyCloud');
+            hobbyCloud.innerHTML = '';
+            (data.hobbies || []).forEach(function(h, i) {
+                var tag = document.createElement('span');
+                tag.className = 'hobby-tag';
+                tag.textContent = h;
+                tag.title = '点击删除';
+                tag.style.cursor = 'pointer';
+                tag.addEventListener('click', function() {
+                    showConfirm('确定要删除爱好"' + h + '"吗？', function() {
+                        data.hobbies.splice(i, 1);
+                        saveData(data);
+                        refreshAbout();
+                    });
+                });
+                hobbyCloud.appendChild(tag);
+            });
+
+            var days = data.startDate ? Math.floor((new Date() - new Date(data.startDate)) / (1000*60*60*24)) : 0;
+            var statsData = [
+                { number: days, label: '天在一起' },
+                { number: (data.places || []).length, label: '个地方留下足迹' },
+                { number: (data.photos || []).length, label: '张珍贵的照片' },
+                { number: (data.diaries || []).length, label: '篇日记' }
+            ];
+            var statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '';
+            statsData.forEach(function(s) {
+                statsGrid.innerHTML += '<div class="stat-item"><div class="stat-number">' + s.number + '</div><div class="stat-label">' + s.label + '</div></div>';
+            });
+
+            updateShareLink();
+        }
+
+        function showEditAboutModal() {
+            var data = APP_DATA;
+            showModal({
+                title: '编辑关于我们',
+                wide: true,
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">第一个人名字</label><input type="text" id="p1Name" class="form-input" value="' + escapeHTML(data.person1.name || '') + '"></div>' +
+                    '<div class="form-group"><label class="form-label">第一个人简介</label><textarea id="p1Intro" class="form-textarea" rows="2">' + escapeHTML(data.person1.intro || '') + '</textarea></div>' +
+                    '<div class="form-group"><label class="form-label">第二个人名字</label><input type="text" id="p2Name" class="form-input" value="' + escapeHTML(data.person2.name || '') + '"></div>' +
+                    '<div class="form-group"><label class="form-label">第二个人简介</label><textarea id="p2Intro" class="form-textarea" rows="2">' + escapeHTML(data.person2.intro || '') + '</textarea></div>' +
+                    '<div class="form-group"><label class="form-label">添加爱好（用逗号分隔）</label><input type="text" id="newHobbies" class="form-input" placeholder="摄影, 旅行, 烘焙"></div>' +
+                    '<div class="form-group"><label class="form-label">添加故事节点</label><input type="text" id="storyTitle" class="form-input" placeholder="故事标题" style="margin-bottom:8px;"><input type="date" id="storyDate" class="form-input" value="' + getTodayDateStr() + '" style="margin-bottom:8px;"><textarea id="storyDesc" class="form-textarea" rows="2" placeholder="故事描述..."></textarea></div>',
+                onSave: function(close) {
+                    data.person1.name = document.getElementById('p1Name').value.trim() || data.person1.name;
+                    data.person1.intro = document.getElementById('p1Intro').value.trim();
+                    data.person2.name = document.getElementById('p2Name').value.trim() || data.person2.name;
+                    data.person2.intro = document.getElementById('p2Intro').value.trim();
+                    var newHobbies = document.getElementById('newHobbies').value.trim();
+                    if (newHobbies) {
+                        newHobbies.split(',').map(function(h) { return h.trim(); }).filter(function(h) { return h && data.hobbies.indexOf(h) === -1; }).forEach(function(h) { data.hobbies.push(h); });
+                    }
+                    var storyTitle = document.getElementById('storyTitle').value.trim();
+                    var storyDate = document.getElementById('storyDate').value;
+                    var storyDesc = document.getElementById('storyDesc').value.trim();
+                    if (storyTitle && storyDate && storyDesc) {
+                        data.timelineNodes.push({ id: generateId(data.timelineNodes), title: storyTitle, date: storyDate, desc: storyDesc });
+                    }
+                    saveData(data);
+                    refreshAbout();
+                    close();
+                }
+            });
+        }
+
+        function showEditStoryModal(node) {
+            showModal({
+                title: '编辑故事节点',
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">标题</label><input type="text" id="storyTitleEdit" class="form-input" value="' + escapeHTML(node.title) + '"></div>' +
+                    '<div class="form-group"><label class="form-label">日期</label><input type="date" id="storyDateEdit" class="form-input" value="' + node.date + '"></div>' +
+                    '<div class="form-group"><label class="form-label">描述</label><textarea id="storyDescEdit" class="form-textarea" rows="2">' + escapeHTML(node.desc) + '</textarea></div>',
+                onSave: function(close) {
+                    var title = document.getElementById('storyTitleEdit').value.trim();
+                    var date = document.getElementById('storyDateEdit').value;
+                    var desc = document.getElementById('storyDescEdit').value.trim();
+                    if (!title || !date || !desc) { alert('请填写完整信息'); return; }
+                    var idx = -1;
+                    for (var i = 0; i < APP_DATA.timelineNodes.length; i++) {
+                        if (APP_DATA.timelineNodes[i].id === node.id) { idx = i; break; }
+                    }
+                    if (idx > -1) { APP_DATA.timelineNodes[idx] = { id: node.id, title: title, date: date, desc: desc }; saveData(APP_DATA); refreshAbout(); }
+                    close();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
