@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相册墙 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html" class="active">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <div id="nav-space-name"></div>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>相册墙</h1>
+            <p class="subtitle">每一张照片，都是我们共同的回忆。</p>
+        </section>
+        <div class="filter-bar fade-in" id="filterBar"></div>
+        <div class="photo-grid fade-in" id="photoGrid"></div>
+    </main>
+
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content" id="lightboxContent"></div>
+        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+    </div>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        var allTags = [];
+        var currentPhotos = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshPhotos();
+            addFAB(function() { showAddPhotoModal(); });
+        });
+
+        function refreshPhotos() {
+            currentPhotos = APP_DATA.photos || [];
+            allTags = [];
+            var tagSet = {};
+            currentPhotos.forEach(function(p) {
+                (p.tags || []).forEach(function(t) { tagSet[t] = true; });
+            });
+            allTags = Object.keys(tagSet);
+            renderFilterBar();
+            renderPhotoGrid(currentPhotos);
+        }
+
+        function renderFilterBar() {
+            var bar = document.getElementById('filterBar');
+            bar.innerHTML = '<button class="filter-tag active" data-tag="all">全部</button>' +
+                allTags.map(function(tag) { return '<button class="filter-tag" data-tag="' + escapeHTML(tag) + '">' + escapeHTML(tag) + '</button>'; }).join('');
+            bar.querySelectorAll('.filter-tag').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    bar.querySelectorAll('.filter-tag').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    var tag = btn.dataset.tag;
+                    if (tag === 'all') renderPhotoGrid(currentPhotos);
+                    else renderPhotoGrid(currentPhotos.filter(function(p) { return (p.tags || []).indexOf(tag) > -1; }));
+                });
+            });
+        }
+
+        function renderPhotoGrid(photos) {
+            var grid = document.getElementById('photoGrid');
+            grid.innerHTML = '';
+            photos.forEach(function(photo) {
+                var card = document.createElement('div');
+                card.className = 'photo-card';
+                var imgHTML = photo.image
+                    ? '<img src="' + photo.image + '" alt="' + escapeHTML(photo.title) + '" loading="lazy" onclick="openLightbox(\'' + (photo.image ? photo.image.replace(/'/g,"\\'") : '') + '\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\')">'
+                    : '<div class="photo-emoji" onclick="openLightbox(\'\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\')">' + (photo.emoji || '📷') + '</div>';
+                card.innerHTML = imgHTML +
+                    '<div class="photo-info">' +
+                    '<div class="photo-title">' + escapeHTML(photo.title) + '</div>' +
+                    '<div class="photo-date">' + formatDate(photo.date) + '</div>' +
+                    '<div class="photo-tags">' + (photo.tags || []).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
+                    '</div>';
+                card.appendChild(createCardActions(
+                    function() { showEditPhotoModal(photo); },
+                    function() {
+                        showConfirm('确定要删除这张照片吗？', function() {
+                            APP_DATA.photos = APP_DATA.photos.filter(function(p) { return p.id !== photo.id; });
+                            saveData(APP_DATA);
+                            refreshPhotos();
+                        });
+                    }
+                ));
+                grid.appendChild(card);
+            });
+        }
+
+        function showAddPhotoModal() {
+            var selectedImage = '';
+            showModal({
+                title: '添加照片',
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">选择图片</label>' + createImageUploadHTML('photoInput', 'photoPreview', '') + '</div>' +
+                    '<div class="form-group"><label class="form-label">标题</label><input type="text" id="photoTitle" class="form-input" placeholder="照片描述"></div>' +
+                    '<div class="form-group"><label class="form-label">日期</label><input type="date" id="photoDate" class="form-input" value="' + getTodayDateStr() + '"></div>' +
+                    '<div class="form-group"><label class="form-label">标签（用逗号分隔）</label><input type="text" id="photoTags" class="form-input" placeholder="旅行, 日常, 风景"></div>',
+                onSave: function(close) {
+                    var title = document.getElementById('photoTitle').value.trim();
+                    var date = document.getElementById('photoDate').value;
+                    var tagsStr = document.getElementById('photoTags').value.trim();
+                    if (!selectedImage || !title || !date) { alert('请上传图片并填写标题和日期'); return; }
+                    var tags = tagsStr ? tagsStr.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }) : [];
+                    APP_DATA.photos.push({ id: generateId(APP_DATA.photos), image: selectedImage, title: title, date: date, tags: tags });
+                    saveData(APP_DATA);
+                    refreshPhotos();
+                    close();
+                }
+            });
+            bindImageUpload('photoInput', 'photoPreview', function(base64) { selectedImage = base64; });
+        }
+
+        function showEditPhotoModal(photo) {
+            var selectedImage = photo.image || '';
+            showModal({
+                title: '编辑照片',
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">更换照片（可选）</label>' + createImageUploadHTML('photoInputEdit', 'photoPreviewEdit', photo.image || '') + '</div>' +
+                    '<div class="form-group"><label class="form-label">标题</label><input type="text" id="photoTitleEdit" class="form-input" value="' + escapeHTML(photo.title) + '"></div>' +
+                    '<div class="form-group"><label class="form-label">日期</label><input type="date" id="photoDateEdit" class="form-input" value="' + (photo.date || '') + '"></div>' +
+                    '<div class="form-group"><label class="form-label">标签（用逗号分隔）</label><input type="text" id="photoTagsEdit" class="form-input" value="' + escapeHTML((photo.tags || []).join(', ')) + '"></div>',
+                onSave: function(close) {
+                    var title = document.getElementById('photoTitleEdit').value.trim();
+                    var date = document.getElementById('photoDateEdit').value;
+                    var tagsStr = document.getElementById('photoTagsEdit').value.trim();
+                    if (!title || !date) { alert('请填写标题和日期'); return; }
+                    var tags = tagsStr ? tagsStr.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }) : [];
+                    var idx = -1;
+                    for (var i = 0; i < APP_DATA.photos.length; i++) {
+                        if (APP_DATA.photos[i].id === photo.id) { idx = i; break; }
+                    }
+                    if (idx > -1) {
+                        APP_DATA.photos[idx].image = selectedImage;
+                        APP_DATA.photos[idx].title = title;
+                        APP_DATA.photos[idx].date = date;
+                        APP_DATA.photos[idx].tags = tags;
+                        saveData(APP_DATA);
+                        refreshPhotos();
+                    }
+                    close();
+                }
+            });
+            bindImageUpload('photoInputEdit', 'photoPreviewEdit', function(base64) { selectedImage = base64; });
+        }
+
+        function openLightbox(image, title, date, tags) {
+            var content = document.getElementById('lightboxContent');
+            if (image) {
+                content.innerHTML = '<img src="' + image + '" alt="' + escapeHTML(title) + '">' +
+                    '<div class="lightbox-info">' +
+                    '<div class="lightbox-title">' + escapeHTML(title) + '</div>' +
+                    '<div class="lightbox-date">' + formatDate(date) + '</div>' +
+                    '<div class="lightbox-tags">' + tags.split(' ').filter(function(t) { return t; }).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
+                    '</div>';
+            } else {
+                var emoji = '📷';
+                for (var i = 0; i < APP_DATA.photos.length; i++) {
+                    if (APP_DATA.photos[i].title === title) { emoji = APP_DATA.photos[i].emoji || '📷'; break; }
+                }
+                content.innerHTML = '<div style="font-size:8rem;text-align:center;padding:40px;">' + emoji + '</div>' +
+                    '<div class="lightbox-info">' +
+                    '<div class="lightbox-title">' + escapeHTML(title) + '</div>' +
+                    '<div class="lightbox-date">' + formatDate(date) + '</div>' +
+                    '</div>';
+            }
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) closeLightbox();
+        });
+    </script>
+</body>
+</html>
