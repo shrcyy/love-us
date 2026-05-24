@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愿望清单 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html" class="active">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>愿望清单</h1>
+            <p class="subtitle">一起许下的愿望，一起慢慢实现。</p>
+        </section>
+        <div class="wishlist-stats fade-in">
+            <div class="stats-number" id="wishStats">--</div>
+            <div style="margin-top:8px;"><span style="color:var(--text-light);">已完成愿望</span></div>
+            <div class="progress-bar" style="margin-top:14px;"><div class="progress-fill" id="wishProgress" style="width:0%;"></div></div>
+        </div>
+        <div class="wishlist-grid fade-in" id="wishlistGrid"></div>
+    </main>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshWishes();
+            addFAB(() => showAddWishModal());
+        });
+
+        function refreshWishes() {
+            const wishes = APP_DATA.wishes;
+            const doneCount = wishes.filter(w => w.done).length;
+            const total = wishes.length;
+            const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+            document.getElementById('wishStats').textContent = `${doneCount} / ${total}`;
+            document.getElementById('wishProgress').style.width = pct + '%';
+
+            const grid = document.getElementById('wishlistGrid');
+            grid.innerHTML = '';
+            wishes.forEach(w => {
+                const priorityLabels = { high: '高优先级', medium: '中优先级', low: '低优先级' };
+                const card = document.createElement('div');
+                card.className = `wish-card ${w.done ? 'done' : ''}`;
+                card.innerHTML = `
+                    <div class="wish-name">${w.name}</div>
+                    <div class="wish-desc">${w.desc}</div>
+                    <div class="wish-meta">
+                        <span class="badge badge-${w.priority}">${priorityLabels[w.priority]}</span>
+                        ${w.done ? '<span class="badge badge-done">已完成</span>' : '<span class="badge">待完成</span>'}
+                    </div>
+                    ${w.done && w.doneDate ? `<div class="wish-done-date" style="margin-top:6px;">完成于 ${formatDate(w.doneDate)}</div>` : ''}`;
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.card-actions')) return;
+                    toggleWishDone(w.id);
+                });
+                card.appendChild(createCardActions(
+                    () => showEditWishModal(w),
+                    () => showConfirm('确定要删除这个愿望吗？', () => deleteWish(w.id))
+                ));
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleWishDone(id) {
+            const index = APP_DATA.wishes.findIndex(w => w.id === id);
+            if (index > -1) {
+                APP_DATA.wishes[index].done = !APP_DATA.wishes[index].done;
+                APP_DATA.wishes[index].doneDate = APP_DATA.wishes[index].done ? getTodayDateStr() : null;
+                saveData(APP_DATA);
+                refreshWishes();
+            }
+        }
+
+        function showAddWishModal() {
+            showModal({
+                title: '添加愿望',
+                bodyHTML: `
+                    <div class="form-group"><label class="form-label">愿望名称</label><input type="text" id="wishName" class="form-input" placeholder="想一起做什么..."></div>
+                    <div class="form-group"><label class="form-label">描述</label><textarea id="wishDesc" class="form-textarea" rows="2" placeholder="详细描述这个愿望..."></textarea></div>
+                    <div class="form-group"><label class="form-label">优先级</label><select id="wishPriority" class="form-input"><option value="high">高优先级</option><option value="medium" selected>中优先级</option><option value="low">低优先级</option></select></div>
+                `,
+                onSave: (close) => {
+                    const name = document.getElementById('wishName').value.trim();
+                    const desc = document.getElementById('wishDesc').value.trim();
+                    const priority = document.getElementById('wishPriority').value;
+                    if (!name) { alert('请填写愿望名称'); return; }
+                    APP_DATA.wishes.push({ id: generateId(APP_DATA.wishes), name, desc, priority, done: false, doneDate: null });
+                    saveData(APP_DATA);
+                    refreshWishes();
+                    close();
+                }
+            });
+        }
+
+        function showEditWishModal(wish) {
+            showModal({
+                title: '编辑愿望',
+                bodyHTML: `
+                    <div class="form-group"><label class="form-label">愿望名称</label><input type="text" id="wishNameEdit" class="form-input" value="${wish.name}"></div>
+                    <div class="form-group"><label class="form-label">描述</label><textarea id="wishDescEdit" class="form-textarea" rows="2">${wish.desc||''}</textarea></div>
+                    <div class="form-group"><label class="form-label">优先级</label><select id="wishPriorityEdit" class="form-input"><option value="high" ${wish.priority==='high'?'selected':''}>高优先级</option><option value="medium" ${wish.priority==='medium'?'selected':''}>中优先级</option><option value="low" ${wish.priority==='low'?'selected':''}>低优先级</option></select></div>
+                `,
+                onSave: (close) => {
+                    const name = document.getElementById('wishNameEdit').value.trim();
+                    const desc = document.getElementById('wishDescEdit').value.trim();
+                    const priority = document.getElementById('wishPriorityEdit').value;
+                    if (!name) { alert('请填写愿望名称'); return; }
+                    const index = APP_DATA.wishes.findIndex(w => w.id === wish.id);
+                    if (index > -1) { APP_DATA.wishes[index] = { ...APP_DATA.wishes[index], name, desc, priority }; saveData(APP_DATA); refreshWishes(); }
+                    close();
+                }
+            });
+        }
+
+        function deleteWish(id) {
+            APP_DATA.wishes = APP_DATA.wishes.filter(w => w.id !== id);
+            saveData(APP_DATA);
+            refreshWishes();
+        }
+    </script>
+</body>
+</html>
