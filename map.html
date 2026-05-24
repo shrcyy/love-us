@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的地图 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .map-wrapper { position:relative; width:100%; height:calc(100vh - var(--nav-height) - 120px); min-height:400px; border-radius:var(--radius); overflow:hidden; box-shadow:0 4px 24px var(--shadow); }
+        #map { width:100%; height:100%; }
+        .map-stats-bar { display:flex; justify-content:center; gap:24px; padding:16px 20px; background:var(--white); border-radius:var(--radius); box-shadow:0 2px 12px var(--shadow); margin-bottom:16px; flex-wrap:wrap; }
+        .map-stat-item { text-align:center; }
+        .map-stat-num { font-size:1.8rem; font-weight:700; color:var(--primary); font-family:var(--font-title); }
+        .map-stat-label { font-size:0.85rem; color:var(--text-light); }
+        .leaflet-popup-content { font-family:var(--font-body); color:var(--text); min-width:200px; }
+        .leaflet-popup-content .popup-name { font-size:1.1rem; font-weight:700; color:var(--primary); margin-bottom:4px; }
+        .leaflet-popup-content .popup-date { font-size:0.85rem; color:var(--text-light); margin-bottom:6px; }
+        .leaflet-popup-content .popup-memory { font-size:0.9rem; color:var(--text); margin-bottom:8px; line-height:1.5; }
+        .leaflet-popup-content .popup-photo { max-width:100%; max-height:120px; border-radius:8px; margin-bottom:8px; }
+        .leaflet-popup-content .popup-actions { display:flex; gap:6px; flex-wrap:wrap; }
+        .leaflet-popup-content .popup-actions button { padding:4px 10px; border-radius:6px; border:1px solid var(--accent-light); background:var(--white); color:var(--text); cursor:pointer; font-size:0.8rem; transition:all 0.2s; }
+        .leaflet-popup-content .popup-actions button:hover { background:var(--secondary-light); }
+        .leaflet-popup-content .popup-actions .btn-check { color:var(--primary); border-color:var(--primary); }
+        .leaflet-popup-content .popup-actions .btn-check.checked { background:var(--primary); color:var(--white); }
+        .leaflet-popup-content .popup-actions .btn-delete { color:#e74c3c; border-color:#e74c3c; }
+        .checked-marker { filter:hue-rotate(90deg) saturate(1.5); }
+        @media (max-width:768px) {
+            .map-wrapper { height:calc(100vh - var(--nav-height) - 80px); border-radius:0; }
+            .map-stats-bar { margin:0 8px 8px; padding:12px; gap:12px; }
+            .map-stat-num { font-size:1.4rem; }
+        }
+    </style>
+</head>
+<body class="no-petals">
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html" class="active">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <div id="nav-space-name"></div>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container" style="max-width:100%;padding:0 16px;">
+        <section class="page-hero" style="padding:20px 0 10px;">
+            <h1>我们的地图</h1>
+            <p class="subtitle">一起走过的路，每一步都算数。</p>
+        </section>
+        <div class="map-stats-bar fade-in" id="mapStatsBar">
+            <div class="map-stat-item"><div class="map-stat-num" id="totalPlaces">0</div><div class="map-stat-label">去过的地方</div></div>
+            <div class="map-stat-item"><div class="map-stat-num" id="checkedPlaces">0</div><div class="map-stat-label">已打卡</div></div>
+        </div>
+        <div class="map-wrapper fade-in" id="mapWrapper">
+            <div id="map"></div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map;
+        var markers = {};
+        var currentPlaces = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            refreshPlaces();
+            addFAB(function() { startAddPlaceMode(); });
+        });
+
+        function initMap() {
+            map = L.map('map', { zoomControl: true }).setView([35, 105], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            }).addTo(map);
+            // Invalidate size after container is visible
+            setTimeout(function() { map.invalidateSize(); }, 300);
+        }
+
+        function refreshPlaces() {
+            currentPlaces = APP_DATA.places || [];
+            // Clear existing markers
+            Object.keys(markers).forEach(function(k) { map.removeLayer(markers[k]); });
+            markers = {};
+            // Add markers
+            currentPlaces.forEach(function(place) {
+                addMarker(place);
+            });
+            // Update stats
+            document.getElementById('totalPlaces').textContent = currentPlaces.length;
+            document.getElementById('checkedPlaces').textContent = currentPlaces.filter(function(p) { return p.checked; }).length;
+        }
+
+        function addMarker(place) {
+            var icon = L.icon({
+                iconUrl: place.checked
+                    ? 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44"><path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 28 16 28s16-16 16-28C32 7.2 24.8 0 16 0z" fill="#4CAF50" stroke="#388E3C" stroke-width="1.5"/><circle cx="16" cy="15" r="6" fill="white"/></svg>')
+                    : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44"><path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 28 16 28s16-16 16-28C32 7.2 24.8 0 16 0z" fill="#FF8C94" stroke="#E6737C" stroke-width="1.5"/><circle cx="16" cy="15" r="6" fill="white"/></svg>'),
+                iconSize: [32, 44],
+                iconAnchor: [16, 44],
+                popupAnchor: [0, -44]
+            });
+            var marker = L.marker([place.lat, place.lng], { icon: icon, draggable: true }).addTo(map);
+            marker.bindPopup(buildPopupContent(place), { maxWidth: 280, className: 'custom-popup' });
+            marker.on('dragend', function(e) {
+                var pos = e.target.getLatLng();
+                var idx = findPlaceIndex(place.id);
+                if (idx > -1) {
+                    APP_DATA.places[idx].lat = pos.lat;
+                    APP_DATA.places[idx].lng = pos.lng;
+                    saveData(APP_DATA);
+                }
+            });
+            markers[place.id] = marker;
+        }
+
+        function buildPopupContent(place) {
+            var photoHTML = place.photo ? '<img class="popup-photo" src="' + place.photo + '" alt="">' : '';
+            var checkedClass = place.checked ? ' checked' : '';
+            var checkedText = place.checked ? '已打卡' : '打卡';
+            return '<div class="popup-name">' + escapeHTML(place.name) + '</div>' +
+                '<div class="popup-date">' + formatDate(place.date) + '</div>' +
+                photoHTML +
+                '<div class="popup-memory">' + escapeHTML(place.memory || '') + '</div>' +
+                '<div class="popup-actions">' +
+                '<button class="btn-check' + checkedClass + '" onclick="toggleCheck(' + place.id + ')">' + checkedText + '</button>' +
+                '<button onclick="showEditPlaceModalById(' + place.id + ')">编辑</button>' +
+                '<button class="btn-delete" onclick="deletePlace(' + place.id + ')">删除</button>' +
+                '</div>';
+        }
+
+        function findPlaceIndex(id) {
+            for (var i = 0; i < APP_DATA.places.length; i++) {
+                if (APP_DATA.places[i].id === id) return i;
+            }
+            return -1;
+        }
+
+        function toggleCheck(id) {
+            var idx = findPlaceIndex(id);
+            if (idx > -1) {
+                APP_DATA.places[idx].checked = !APP_DATA.places[idx].checked;
+                saveData(APP_DATA);
+                refreshPlaces();
+            }
+        }
+
+        function deletePlace(id) {
+            showConfirm('确定要删除这个地点吗？', function() {
+                APP_DATA.places = APP_DATA.places.filter(function(p) { return p.id !== id; });
+                saveData(APP_DATA);
+                refreshPlaces();
+            });
+        }
+
+        function showEditPlaceModalById(id) {
+            var place = APP_DATA.places.find(function(p) { return p.id === id; });
+            if (place) showEditPlaceModal(place);
+        }
+
+        var addModeActive = false;
+        function startAddPlaceMode() {
+            if (addModeActive) return;
+            addModeActive = true;
+            map.getContainer().style.cursor = 'crosshair';
+            var hint = document.createElement('div');
+            hint.id = 'mapAddHint';
+            hint.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--primary);color:white;padding:8px 20px;border-radius:20px;z-index:1000;font-size:0.9rem;pointer-events:none;';
+            hint.textContent = '在地图上点击选择位置';
+            document.getElementById('mapWrapper').appendChild(hint);
+
+            map.once('click', function(e) {
+                addModeActive = false;
+                map.getContainer().style.cursor = '';
+                var h = document.getElementById('mapAddHint');
+                if (h) h.remove();
+                showAddPlaceModal(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        function showAddPlaceModal(lat, lng) {
+            var selectedPhoto = '';
+            showModal({
+                title: '添加地点',
+                wide: true,
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">地点名称</label><input type="text" id="placeName" class="form-input" placeholder="如：北京"></div>' +
+                    '<div class="form-group"><label class="form-label">日期</label><input type="date" id="placeDate" class="form-input" value="' + getTodayDateStr() + '"></div>' +
+                    '<div class="form-group"><label class="form-label">回忆描述</label><textarea id="placeMemory" class="form-textarea" rows="2" placeholder="在这里发生了什么..."></textarea></div>' +
+                    '<div class="form-group"><label class="form-label">照片（可选）</label>' + createImageUploadHTML('placePhotoInput', 'placePhotoPreview', '') + '</div>' +
+                    '<input type="hidden" id="placeLat" value="' + lat + '"><input type="hidden" id="placeLng" value="' + lng + '">',
+                onSave: function(close) {
+                    var name = document.getElementById('placeName').value.trim();
+                    var date = document.getElementById('placeDate').value;
+                    var memory = document.getElementById('placeMemory').value.trim();
+                    var latVal = parseFloat(document.getElementById('placeLat').value);
+                    var lngVal = parseFloat(document.getElementById('placeLng').value);
+                    if (!name || !date) { alert('请填写地点名称和日期'); return; }
+                    APP_DATA.places.push({
+                        id: generateId(APP_DATA.places),
+                        name: name, date: date, lat: latVal, lng: lngVal,
+                        memory: memory, checked: false, photo: selectedPhoto
+                    });
+                    saveData(APP_DATA);
+                    refreshPlaces();
+                    close();
+                }
+            });
+            bindImageUpload('placePhotoInput', 'placePhotoPreview', function(b64) { selectedPhoto = b64; });
+        }
+
+        function showEditPlaceModal(place) {
+            var selectedPhoto = place.photo || '';
+            showModal({
+                title: '编辑地点',
+                wide: true,
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">地点名称</label><input type="text" id="placeNameEdit" class="form-input" value="' + escapeHTML(place.name) + '"></div>' +
+                    '<div class="form-group"><label class="form-label">日期</label><input type="date" id="placeDateEdit" class="form-input" value="' + place.date + '"></div>' +
+                    '<div class="form-group"><label class="form-label">回忆描述</label><textarea id="placeMemoryEdit" class="form-textarea" rows="2">' + escapeHTML(place.memory || '') + '</textarea></div>' +
+                    '<div class="form-group"><label class="form-label">照片（可选）</label>' + createImageUploadHTML('placePhotoEditInput', 'placePhotoEditPreview', place.photo || '') + '</div>' +
+                    '<p style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">提示：拖拽地图上的标记可以改变位置</p>',
+                onSave: function(close) {
+                    var name = document.getElementById('placeNameEdit').value.trim();
+                    var date = document.getElementById('placeDateEdit').value;
+                    var memory = document.getElementById('placeMemoryEdit').value.trim();
+                    if (!name || !date) { alert('请填写地点名称和日期'); return; }
+                    var idx = findPlaceIndex(place.id);
+                    if (idx > -1) {
+                        APP_DATA.places[idx].name = name;
+                        APP_DATA.places[idx].date = date;
+                        APP_DATA.places[idx].memory = memory;
+                        APP_DATA.places[idx].photo = selectedPhoto;
+                        saveData(APP_DATA);
+                        refreshPlaces();
+                    }
+                    close();
+                }
+            });
+            bindImageUpload('placePhotoEditInput', 'placePhotoEditPreview', function(b64) { selectedPhoto = b64; });
+        }
+    </script>
+</body>
+</html>
