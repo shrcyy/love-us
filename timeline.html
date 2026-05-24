@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间线日记 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html" class="active">时间线</a></li>
+                <li><a href="anniversaries.html">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>时间线日记</h1>
+            <p class="subtitle">把我们的每一天，都写成故事。</p>
+        </section>
+
+        <!-- 搜索和筛选 -->
+        <div class="fade-in" style="margin-bottom: 30px; text-align: center;">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索日记内容...">
+                <button class="btn btn-primary" onclick="searchDiaries()">搜索</button>
+            </div>
+            <div style="margin-top: 16px;">
+                <div class="filter-tags" id="yearFilter">
+                    <button class="filter-tag active" data-year="all">全部</button>
+                    <button class="filter-tag" data-year="2024">2024</button>
+                    <button class="filter-tag" data-year="2023">2023</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间线 -->
+        <div class="timeline" id="timelineContainer">
+            <!-- JS动态填充 -->
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        let currentDiaries = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化时间线
+            refreshDiaries();
+
+            // 年份筛选
+            document.querySelectorAll('#yearFilter .filter-tag').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#yearFilter .filter-tag').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const year = btn.dataset.year;
+                    let filtered = currentDiaries;
+                    if (year !== 'all') {
+                        filtered = currentDiaries.filter(d => d.year == year);
+                    }
+                    renderTimeline(filtered);
+                });
+            });
+
+            // 添加 "+" 浮动按钮
+            addFAB(() => {
+                showAddDiaryModal();
+            });
+        });
+
+        function refreshDiaries() {
+            currentDiaries = APP_DATA.diaries;
+            renderTimeline(currentDiaries);
+        }
+
+        function renderTimeline(diaries) {
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            diaries.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach((d, idx) => {
+                const isEven = idx % 2 === 0;
+                const card = document.createElement('div');
+                card.className = `timeline-item ${isEven ? 'even' : 'odd'} fade-in`;
+                card.innerHTML = `
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-card">
+                        <div class="tl-date">${formatDate(d.date)} · ${d.moodText}</div>
+                        <div class="tl-mood">${d.mood}</div>
+                        <div class="tl-title">${d.title}</div>
+                        <div class="tl-content">${d.content}</div>
+                    </div>`;
+                const actions = createCardActions(
+                    () => showEditDiaryModal(d),
+                    () => showConfirm('确定要删除这篇日记吗？', () => deleteDiary(d.id))
+                );
+                card.querySelector('.timeline-card').appendChild(actions);
+                container.appendChild(card);
+            });
+        }
+
+        function showAddDiaryModal() {
+            const today = getTodayDateStr();
+            const moodOptions = ['🥰','😆','🥺','🎆','🎄','🎂','🏍️','💝','📝','💕','✨','🌸'];
+            let selectedImage = '';
+            const bodyHTML = `
+                <div class="form-group">
+                    <label class="form-label">日期</label>
+                    <input type="date" id="diaryDate" class="form-input" value="${today}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">标题</label>
+                    <input type="text" id="diaryTitle" class="form-input" placeholder="今天发生了什么...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">心情</label>
+                    <div class="emoji-picker" id="moodPicker">
+                        ${moodOptions.map(emoji => `<div class="emoji-option" data-emoji="${emoji}">${emoji}</div>`).join('')}
+                    </div>
+                    <input type="hidden" id="diaryMood" value="🥰">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">正文</label>
+                    <textarea id="diaryContent" class="form-textarea" placeholder="写下今天的点点滴滴..." rows="5"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图片（可选）</label>
+                    ${createImageUploadHTML('diaryImageInput','diaryImagePreview','')}
+                </div>`;
+
+            showModal({
+                title: '添加日记',
+                bodyHTML,
+                onSave: (close) => {
+                    const date = document.getElementById('diaryDate').value;
+                    const title = document.getElementById('diaryTitle').value.trim();
+                    const mood = document.getElementById('diaryMood').value;
+                    const content = document.getElementById('diaryContent').value.trim();
+                    if (!date || !title || !content) {
+                        alert('请填写日期、标题和正文');
+                        return;
+                    }
+                    const newDiary = {
+                        id: generateId(APP_DATA.diaries),
+                        date,
+                        title,
+                        content,
+                        mood,
+                        moodText: getMoodText(mood),
+                        year: new Date(date).getFullYear(),
+                        image: selectedImage
+                    };
+                    APP_DATA.diaries.push(newDiary);
+                    saveData(APP_DATA);
+                    refreshDiaries();
+                    close();
+                }
+            });
+
+            // 绑定 emoji 选择
+            document.querySelectorAll('#moodPicker .emoji-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    document.querySelectorAll('#moodPicker .emoji-option').forEach(o => o.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    document.getElementById('diaryMood').value = opt.dataset.emoji;
+                });
+            });
+            // 默认选中第一个
+            document.querySelector('#moodPicker .emoji-option').classList.add('selected');
+
+            // 绑定图片上传
+            bindImageUpload('diaryImageInput', 'diaryImagePreview', (base64) => {
+                selectedImage = base64;
+            });
+        }
+
+        function showEditDiaryModal(diary) {
+            const moodOptions = ['🥰','😆','🥺','🎆','🎄','🎂','🏍️','💝','📝','💕','✨','🌸'];
+            let selectedImage = diary.image || '';
+            const bodyHTML = `
+                <div class="form-group">
+                    <label class="form-label">日期</label>
+                    <input type="date" id="diaryDateEdit" class="form-input" value="${diary.date}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">标题</label>
+                    <input type="text" id="diaryTitleEdit" class="form-input" value="${diary.title}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">心情</label>
+                    <div class="emoji-picker" id="moodPickerEdit">
+                        ${moodOptions.map(emoji => `<div class="emoji-option ${emoji === diary.mood ? 'selected' : ''}" data-emoji="${emoji}">${emoji}</div>`).join('')}
+                    </div>
+                    <input type="hidden" id="diaryMoodEdit" value="${diary.mood}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">正文</label>
+                    <textarea id="diaryContentEdit" class="form-textarea" rows="5">${diary.content}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图片（可选）</label>
+                    ${createImageUploadHTML('diaryImageInputEdit','diaryImagePreviewEdit', diary.image)}
+                </div>`;
+
+            showModal({
+                title: '编辑日记',
+                bodyHTML,
+                onSave: (close) => {
+                    const date = document.getElementById('diaryDateEdit').value;
+                    const title = document.getElementById('diaryTitleEdit').value.trim();
+                    const mood = document.getElementById('diaryMoodEdit').value;
+                    const content = document.getElementById('diaryContentEdit').value.trim();
+                    if (!date || !title || !content) {
+                        alert('请填写日期、标题和正文');
+                        return;
+                    }
+                    const index = APP_DATA.diaries.findIndex(d => d.id === diary.id);
+                    if (index > -1) {
+                        APP_DATA.diaries[index] = {
+                            ...APP_DATA.diaries[index],
+                            date, title, content, mood,
+                            moodText: getMoodText(mood),
+                            year: new Date(date).getFullYear(),
+                            image: selectedImage
+                        };
+                        saveData(APP_DATA);
+                        refreshDiaries();
+                    }
+                    close();
+                }
+            });
+
+            document.querySelectorAll('#moodPickerEdit .emoji-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    document.querySelectorAll('#moodPickerEdit .emoji-option').forEach(o => o.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    document.getElementById('diaryMoodEdit').value = opt.dataset.emoji;
+                });
+            });
+
+            bindImageUpload('diaryImageInputEdit', 'diaryImagePreviewEdit', (base64) => {
+                selectedImage = base64;
+            });
+        }
+
+        function deleteDiary(id) {
+            APP_DATA.diaries = APP_DATA.diaries.filter(d => d.id !== id);
+            saveData(APP_DATA);
+            refreshDiaries();
+        }
+
+        function getMoodText(mood) {
+            const map = {
+                '🥰':'幸福','😆':'开心','🥺':'感动','🎆':'浪漫','🎄':'温馨','🎂':'惊喜',
+                '🏍️':'自由','💝':'甜蜜','📝':'记录','💕':'心动','✨':'美好','🌸':'温柔'
+            };
+            return map[mood] || '记录';
+        }
+
+        function searchDiaries() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (!query.trim()) {
+                renderTimeline(currentDiaries);
+                return;
+            }
+            const filtered = currentDiaries.filter(d =>
+                d.title.toLowerCase().includes(query) ||
+                d.content.toLowerCase().includes(query) ||
+                (d.moodText && d.moodText.toLowerCase().includes(query))
+            );
+            renderTimeline(filtered);
+        }
+    </script>
+</body>
+</html>
