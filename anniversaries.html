@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纪念日 - 两人纪念</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">💕 Y & C</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="timeline.html">时间线</a></li>
+                <li><a href="anniversaries.html" class="active">纪念日</a></li>
+                <li><a href="gallery.html">相册墙</a></li>
+                <li><a href="wishlist.html">愿望清单</a></li>
+                <li><a href="messages.html">留言板</a></li>
+                <li><a href="map.html">我们的地图</a></li>
+                <li><a href="about.html">关于我们</a></li>
+            </ul>
+            <button class="music-btn" title="背景音乐">🎶</button>
+            <button class="hamburger"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <section class="page-hero">
+            <h1>重要纪念日</h1>
+            <p class="subtitle">每一个特别的日子，都值得被铭记。</p>
+        </section>
+        <div class="anniversary-highlight fade-in" id="nextHighlight"></div>
+        <div class="anniversary-grid fade-in" id="anniversaryGrid"></div>
+    </main>
+
+    <footer class="footer">
+        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        let currentAnniversaries = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAnniversaries();
+            addFAB(() => showAddAnniversaryModal());
+        });
+
+        function refreshAnniversaries() {
+            currentAnniversaries = APP_DATA.anniversaries;
+            renderAnniversaries(currentAnniversaries);
+        }
+
+        function renderAnniversaries(anns) {
+            const today = new Date(); today.setHours(0,0,0,0);
+
+            let nearest = null, minDiff = Infinity;
+            anns.forEach(ann => {
+                const t = new Date(ann.date);
+                t.setFullYear(today.getFullYear());
+                if (t <= today) t.setFullYear(today.getFullYear() + 1);
+                const diff = Math.ceil((t - today) / (1000*60*60*24));
+                if (diff < minDiff) { minDiff = diff; nearest = ann; }
+            });
+            const hl = document.getElementById('nextHighlight');
+            if (nearest) {
+                hl.innerHTML = `<div class="hl-icon">${nearest.icon}</div><div class="hl-name">${nearest.name}</div><div class="hl-countdown">还有 ${minDiff} 天</div><div class="hl-date">${formatDate(nearest.date)}</div>`;
+            }
+
+            const grid = document.getElementById('anniversaryGrid');
+            grid.innerHTML = '';
+            anns.forEach(ann => {
+                const target = new Date(ann.date);
+                const targetThisYear = new Date(today.getFullYear(), target.getMonth(), target.getDate());
+                let diffDays, isPast;
+                if (targetThisYear <= today) {
+                    diffDays = Math.ceil((today - targetThisYear) / (1000*60*60*24));
+                    isPast = true;
+                } else {
+                    diffDays = Math.ceil((targetThisYear - today) / (1000*60*60*24));
+                    isPast = false;
+                }
+                const card = document.createElement('div');
+                card.className = 'anniversary-card';
+                card.innerHTML = `
+                    <div class="an-icon">${ann.icon}</div>
+                    <div class="an-name">${ann.name}</div>
+                    <div class="an-date">${formatDate(ann.date)}</div>
+                    <div class="an-countdown ${isPast ? 'past' : ''}">${isPast ? '已过去 ' + diffDays + ' 天' : '还有 ' + diffDays + ' 天'}</div>
+                    <div class="an-desc">${ann.desc || ''}</div>`;
+                card.appendChild(createCardActions(
+                    () => showEditAnniversaryModal(ann),
+                    () => showConfirm('确定要删除这个纪念日吗？', () => deleteAnniversary(ann.id))
+                ));
+                grid.appendChild(card);
+            });
+        }
+
+        function showAddAnniversaryModal() {
+            const iconOptions = ['💕','🎂','🎁','🌹','✈️','🎬','✨','🎄','🎵','🏖️','💍','🎊'];
+            showModal({
+                title: '添加纪念日',
+                bodyHTML: `
+                    <div class="form-group"><label class="form-label">事件名称</label><input type="text" id="annName" class="form-input" placeholder="如：第一次牵手"></div>
+                    <div class="form-group"><label class="form-label">日期</label><input type="date" id="annDate" class="form-input" value="${getTodayDateStr()}"></div>
+                    <div class="form-group"><label class="form-label">图标</label><div class="emoji-picker" id="iconPicker">${iconOptions.map(icon => `<div class="emoji-option" data-emoji="${icon}">${icon}</div>`).join('')}</div><input type="hidden" id="annIcon" value="💕"></div>
+                    <div class="form-group"><label class="form-label">描述（可选）</label><textarea id="annDesc" class="form-textarea" rows="2" placeholder="关于这个日子的回忆..."></textarea></div>
+                `,
+                onSave: (close) => {
+                    const name = document.getElementById('annName').value.trim();
+                    const date = document.getElementById('annDate').value;
+                    const icon = document.getElementById('annIcon').value;
+                    const desc = document.getElementById('annDesc').value.trim();
+                    if (!name || !date) { alert('请填写事件名称和日期'); return; }
+                    APP_DATA.anniversaries.push({ id: generateId(APP_DATA.anniversaries), name, date, icon, desc, type: 'memory' });
+                    saveData(APP_DATA);
+                    refreshAnniversaries();
+                    close();
+                }
+            });
+            bindEmojiPicker('iconPicker', 'annIcon');
+        }
+
+        function showEditAnniversaryModal(ann) {
+            const iconOptions = ['💕','🎂','🎁','🌹','✈️','🎬','✨','🎄','🎵','🏖️','💍','🎊'];
+            showModal({
+                title: '编辑纪念日',
+                bodyHTML: `
+                    <div class="form-group"><label class="form-label">事件名称</label><input type="text" id="annNameEdit" class="form-input" value="${ann.name}"></div>
+                    <div class="form-group"><label class="form-label">日期</label><input type="date" id="annDateEdit" class="form-input" value="${ann.date}"></div>
+                    <div class="form-group"><label class="form-label">图标</label><div class="emoji-picker" id="iconPickerEdit">${iconOptions.map(icon => `<div class="emoji-option ${icon===ann.icon?'selected':''}" data-emoji="${icon}">${icon}</div>`).join('')}</div><input type="hidden" id="annIconEdit" value="${ann.icon}"></div>
+                    <div class="form-group"><label class="form-label">描述</label><textarea id="annDescEdit" class="form-textarea" rows="2">${ann.desc||''}</textarea></div>
+                `,
+                onSave: (close) => {
+                    const name = document.getElementById('annNameEdit').value.trim();
+                    const date = document.getElementById('annDateEdit').value;
+                    const icon = document.getElementById('annIconEdit').value;
+                    const desc = document.getElementById('annDescEdit').value.trim();
+                    if (!name || !date) { alert('请填写事件名称和日期'); return; }
+                    const index = APP_DATA.anniversaries.findIndex(a => a.id === ann.id);
+                    if (index > -1) { APP_DATA.anniversaries[index] = { ...APP_DATA.anniversaries[index], name, date, icon, desc }; saveData(APP_DATA); refreshAnniversaries(); }
+                    close();
+                }
+            });
+            bindEmojiPicker('iconPickerEdit', 'annIconEdit');
+        }
+
+        function deleteAnniversary(id) {
+            APP_DATA.anniversaries = APP_DATA.anniversaries.filter(a => a.id !== id);
+            saveData(APP_DATA);
+            refreshAnniversaries();
+        }
+
+        function bindEmojiPicker(pickerId, inputId) {
+            document.querySelectorAll('#' + pickerId + ' .emoji-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    document.querySelectorAll('#' + pickerId + ' .emoji-option').forEach(o => o.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    document.getElementById(inputId).value = opt.dataset.emoji;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
