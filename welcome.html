@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的故事</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Welcome page specific styles */
+        body.welcome-page { background: linear-gradient(135deg, #FFF5F7 0%, #FFF0F3 40%, #FFE8EC 100%); min-height:100vh; overflow-x:hidden; }
+        .welcome-wrap { max-width:900px; margin:0 auto; padding:60px 20px 40px; position:relative; z-index:1; }
+        
+        /* Hero */
+        .welcome-hero { text-align:center; margin-bottom:48px; }
+        .welcome-hero h1 { font-family:var(--font-title); font-size:2.6rem; color:var(--primary); margin-bottom:8px; letter-spacing:2px; }
+        .welcome-hero .tagline { font-size:1.05rem; color:var(--text-light); }
+        
+        /* Decorative heart divider */
+        .welcome-divider { text-align:center; margin:8px 0 36px; font-size:1.2rem; color:var(--primary); letter-spacing:8px; opacity:0.6; }
+
+        /* Feature cards grid */
+        .feature-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:44px; }
+        .feature-card { background:var(--white); border-radius:var(--radius); padding:24px 16px; text-align:center; box-shadow:0 2px 12px rgba(255,140,148,0.08); transition:transform 0.3s, box-shadow 0.3s; cursor:default; }
+        .feature-card:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(255,140,148,0.15); }
+        .feature-card .fc-icon { font-size:2.4rem; margin-bottom:10px; display:block; }
+        .feature-card h3 { font-size:1rem; color:var(--text); margin-bottom:4px; font-weight:600; }
+        .feature-card p { font-size:0.82rem; color:var(--text-light); line-height:1.4; margin:0; }
+
+        /* CTA buttons */
+        .welcome-cta { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+        .btn-create { background:linear-gradient(135deg, #FF8C94, #FF7B85); color:#fff; border:none; padding:16px 40px; border-radius:32px; font-size:1.05rem; font-weight:600; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 18px rgba(255,140,148,0.35); letter-spacing:1px; }
+        .btn-create:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(255,140,148,0.45); }
+        .btn-enter { background:var(--white); color:var(--primary); border:2px solid var(--primary); padding:16px 40px; border-radius:32px; font-size:1.05rem; font-weight:600; cursor:pointer; transition:all 0.3s; }
+        .btn-enter:hover { background:var(--secondary-light); transform:translateY(-2px); box-shadow:0 4px 14px rgba(255,140,148,0.2); }
+
+        /* Modal step indicator */
+        .step-indicator { display:flex; justify-content:center; gap:8px; margin-bottom:24px; }
+        .step-dot { width:10px; height:10px; border-radius:50%; background:var(--accent-light); transition:all 0.3s; }
+        .step-dot.active { background:var(--primary); transform:scale(1.3); }
+        .step-dot.done { background:var(--primary); opacity:0.6; }
+
+        /* Recent spaces list */
+        .recent-spaces { margin-bottom:16px; }
+        .recent-spaces-title { font-size:0.85rem; color:var(--text-light); margin-bottom:8px; }
+        .recent-space-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--secondary-light); border-radius:8px; margin-bottom:6px; cursor:pointer; transition:background 0.2s; }
+        .recent-space-item:hover { background:var(--accent-light); }
+        .recent-space-item .rs-name { font-weight:500; color:var(--text); font-size:0.9rem; }
+        .recent-space-item .rs-badge { font-size:0.75rem; color:var(--primary); }
+
+        @media(max-width:768px) {
+            .feature-grid { grid-template-columns:repeat(2, 1fr); gap:12px; }
+            .welcome-hero h1 { font-size:2rem; }
+            .welcome-wrap { padding:40px 16px 32px; }
+            .btn-create, .btn-enter { padding:14px 28px; font-size:0.95rem; width:100%; max-width:300px; }
+            .welcome-cta { flex-direction:column; align-items:center; }
+        }
+        @media(max-width:480px) {
+            .feature-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body class="welcome-page no-petals">
+    <div class="petal-container">
+        <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+        <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+        <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+    </div>
+
+    <div class="welcome-wrap">
+        <!-- Hero -->
+        <div class="welcome-hero fade-in">
+            <h1>我们的故事，从这里开始</h1>
+            <p class="tagline">记录属于两个人的每一个瞬间</p>
+        </div>
+        <div class="welcome-divider">· · ♥ · ·</div>
+
+        <!-- Feature Cards -->
+        <div class="feature-grid fade-in">
+            <div class="feature-card">
+                <span class="fc-icon">📔</span>
+                <h3>时间线日记</h3>
+                <p>记录每一天的甜蜜</p>
+            </div>
+            <div class="feature-card">
+                <span class="fc-icon">🎉</span>
+                <h3>纪念日倒计时</h3>
+                <p>不错过每一个重要日子</p>
+            </div>
+            <div class="feature-card">
+                <span class="fc-icon">🖼️</span>
+                <h3>相册墙</h3>
+                <p>珍藏我们的每一刻</p>
+            </div>
+            <div class="feature-card">
+                <span class="fc-icon">⭐</span>
+                <h3>愿望清单</h3>
+                <p>一起完成的小目标</p>
+            </div>
+            <div class="feature-card">
+                <span class="fc-icon">💌</span>
+                <h3>留言板</h3>
+                <p>写下想对TA说的话</p>
+            </div>
+            <div class="feature-card">
+                <span class="fc-icon">🗺️</span>
+                <h3>我们的地图</h3>
+                <p>标记一起走过的路</p>
+            </div>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div class="welcome-cta fade-in">
+            <button class="btn-create" onclick="startCreateSpace()">创建我们的空间</button>
+            <button class="btn-enter" onclick="startEnterSpace()">进入已有空间</button>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Visited spaces tracking
+        function recordVisitedSpace(hash) {
+            try {
+                var visited = JSON.parse(localStorage.getItem('loveus_visited_spaces') || '[]');
+                visited = visited.filter(function(v) { return v !== hash; });
+                visited.unshift(hash);
+                if (visited.length > 10) visited = visited.slice(0, 10);
+                localStorage.setItem('loveus_visited_spaces', JSON.stringify(visited));
+            } catch(e) {}
+        }
+
+        function getVisitedSpaces() {
+            try {
+                return JSON.parse(localStorage.getItem('loveus_visited_spaces') || '[]');
+            } catch(e) { return []; }
+        }
+
+        function getVisitedSpaceMeta(hash) {
+            var metaKey = 'loveus_data_' + hash + '_meta';
+            var meta = localStorage.getItem(metaKey);
+            if (meta) {
+                try { return JSON.parse(meta); } catch(e) { return null; }
+            }
+            return null;
+        }
+
+        // Create space flow
+        function startCreateSpace() {
+            var step = 0;
+            var spaceName = '';
+            var spacePassword = '';
+            var startDate = '';
+
+            function showStep() {
+                var bodyHTML = '';
+                if (step === 0) {
+                    bodyHTML = '<div class="step-indicator"><span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span></div>' +
+                        '<div class="form-group"><label class="form-label">给你们的空间起个名字</label>' +
+                        '<input type="text" id="wSpaceName" class="form-input" placeholder="如：我们的故事、Y&C的时光" value="' + escapeHTML(spaceName) + '" autofocus></div>';
+                } else if (step === 1) {
+                    bodyHTML = '<div class="step-indicator"><span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span></div>' +
+                        '<div class="form-group"><label class="form-label">设置访问密码（4位以上，保护隐私）</label>' +
+                        '<input type="password" id="wSpacePwd" class="form-input" placeholder="设置密码..." autocomplete="new-password" autofocus></div>' +
+                        '<div class="form-group"><label class="form-label">确认密码</label>' +
+                        '<input type="password" id="wSpacePwdConfirm" class="form-input" placeholder="再次输入密码" autocomplete="new-password"></div>' +
+                        '<p style="font-size:0.78rem;color:var(--text-lighter);">留空则不设密码，但强烈建议设置以保护隐私。</p>';
+                } else {
+                    bodyHTML = '<div class="step-indicator"><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span></div>' +
+                        '<div class="form-group"><label class="form-label">你们在一起的日子是哪天？</label>' +
+                        '<input type="date" id="wStartDate" class="form-input" value="' + (startDate || '') + '" autofocus></div>' +
+                        '<p style="font-size:0.78rem;color:var(--text-lighter);">选择你们在一起的第一天，首页会显示已经一起度过的天数。</p>';
+                }
+
+                var saveText = step < 2 ? '下一步' : '完成创建';
+                showModal({
+                    title: '创建我们的空间',
+                    bodyHTML: bodyHTML,
+                    saveText: saveText,
+                    onSave: function(close) {
+                        if (step === 0) {
+                            spaceName = document.getElementById('wSpaceName').value.trim();
+                            if (!spaceName) { alert('请输入空间名称'); return; }
+                            step = 1; close(); setTimeout(showStep, 300);
+                        } else if (step === 1) {
+                            var pw = document.getElementById('wSpacePwd').value;
+                            var pwConfirm = document.getElementById('wSpacePwdConfirm').value;
+                            if (pw && pw !== pwConfirm) { alert('两次密码不一致'); return; }
+                            if (pw && pw.length < 4) { alert('密码至少需要4位'); return; }
+                            spacePassword = pw;
+                            step = 2; close(); setTimeout(showStep, 300);
+                        } else {
+                            startDate = document.getElementById('wStartDate').value;
+                            if (!startDate) { alert('请选择日期'); return; }
+                            var hash = 'space' + Date.now().toString(36);
+                            // Set space meta
+                            if (spacePassword) {
+                                hashPasswordSHA256(spacePassword).then(function(hashPwd) {
+                                    setSpaceMetaFor(hash, spaceName, hashPwd);
+                                    setDefaultData(hash, startDate);
+                                    recordVisitedSpace(hash);
+                                    close();
+                                    window.location.href = 'index.html#' + hash;
+                                });
+                            } else {
+                                setSpaceMetaFor(hash, spaceName);
+                                setDefaultData(hash, startDate);
+                                recordVisitedSpace(hash);
+                                close();
+                                window.location.href = 'index.html#' + hash;
+                            }
+                        }
+                    },
+                    onCancel: function() {
+                        if (step > 0) { step--; setTimeout(showStep, 300); }
+                    }
+                });
+            }
+
+            showStep();
+        }
+
+        function setSpaceMetaFor(hash, name, passwordHash) {
+            var metaKey = 'loveus_data_' + hash + '_meta';
+            var meta = { name: name, created: new Date().toISOString() };
+            if (passwordHash) meta.passwordHash = passwordHash;
+            localStorage.setItem(metaKey, JSON.stringify(meta));
+        }
+
+        function setDefaultData(hash, startDate) {
+            var key = 'loveus_data_' + hash;
+            var defaultData = {
+                startDate: startDate,
+                person1: { name: '我', intro: '' },
+                person2: { name: '你', intro: '' },
+                diaries: [],
+                anniversaries: [
+                    { id: 1, name: '在一起周年', date: '', icon: '💕', repeatYearly: true },
+                    { id: 2, name: '第一次牵手', date: '', icon: '🤝', repeatYearly: true },
+                    { id: 3, name: '第一次旅行', date: '', icon: '✈️', repeatYearly: true }
+                ],
+                photos: [],
+                wishes: [],
+                messages: [],
+                places: [],
+                timelineNodes: [],
+                hobbies: []
+            };
+            localStorage.setItem(key, JSON.stringify(defaultData));
+        }
+
+        // Enter existing space flow
+        function startEnterSpace() {
+            var visited = getVisitedSpaces();
+            var recentHTML = '';
+            if (visited.length > 0) {
+                recentHTML = '<div class="recent-spaces"><div class="recent-spaces-title">最近访问的空间</div>';
+                visited.forEach(function(h) {
+                    var m = getVisitedSpaceMeta(h);
+                    var name = m ? m.name : h;
+                    var hasPwd = m && m.passwordHash;
+                    recentHTML += '<div class="recent-space-item" onclick="enterRecentSpace(\'' + escapeHTML(h) + '\', ' + (hasPwd ? 'true' : 'false') + ')">' +
+                        '<span class="rs-name">' + escapeHTML(name) + (hasPwd ? ' <span class="rs-badge">🔐</span>' : '') + '</span>' +
+                        '<span style="font-size:0.8rem;color:var(--primary);">进入 →</span></div>';
+                });
+                recentHTML += '</div>';
+            }
+
+            showModal({
+                title: '进入已有空间',
+                bodyHTML: recentHTML +
+                    '<div class="form-group"><label class="form-label">空间标识</label>' +
+                    '<input type="text" id="eSpaceId" class="form-input" placeholder="输入空间标识..."></div>' +
+                    '<div class="form-group"><label class="form-label">密码（如已设置）</label>' +
+                    '<input type="password" id="eSpacePwd" class="form-input" placeholder="输入密码..." autocomplete="off"></div>',
+                saveText: '进入',
+                onSave: function(close) {
+                    var hash = document.getElementById('eSpaceId').value.trim();
+                    if (!hash) { alert('请输入空间标识'); return; }
+                    var pwd = document.getElementById('eSpacePwd').value;
+                    enterSpace(hash, pwd, close);
+                }
+            });
+        }
+
+        window.enterRecentSpace = function(hash, hasPwd) {
+            if (hasPwd) {
+                var pwd = prompt('请输入该空间密码：');
+                if (pwd === null) return;
+                enterSpace(hash, pwd, null);
+            } else {
+                recordVisitedSpace(hash);
+                window.location.href = 'index.html#' + hash;
+            }
+        };
+
+        function enterSpace(hash, pwd, modalClose) {
+            var metaKey = 'loveus_data_' + hash + '_meta';
+            var meta = localStorage.getItem(metaKey);
+            var parsed = meta ? JSON.parse(meta) : null;
+            if (!parsed) { alert('空间不存在'); return; }
+            if (parsed.passwordHash) {
+                if (!pwd) { alert('该空间需要密码'); return; }
+                hashPasswordSHA256(pwd).then(function(h) {
+                    if (h === parsed.passwordHash) {
+                        recordVisitedSpace(hash);
+                        if (modalClose) modalClose();
+                        window.location.href = 'index.html#' + hash;
+                    } else {
+                        alert('密码错误');
+                    }
+                });
+            } else {
+                recordVisitedSpace(hash);
+                if (modalClose) modalClose();
+                window.location.href = 'index.html#' + hash;
+            }
+        }
+
+        // Init animations
+        document.addEventListener('DOMContentLoaded', function() {
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) entry.target.classList.add('visible');
+                });
+            }, { threshold: 0.05 });
+            document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
+        });
+    </script>
+</body>
+</html>
