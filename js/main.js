@@ -15,18 +15,124 @@ function updateNavSpaceName() {
     initSpaceUI();
 }
 
+/* ===== Password Gate ===== */
+function checkAccess(onGranted, onDenied) {
+    var meta = getSpaceMeta();
+    if (!meta || !meta.passwordHash) {
+        setLoggedIn();
+        onGranted();
+        return;
+    }
+    if (isLoggedIn()) {
+        onGranted();
+        return;
+    }
+    onDenied();
+}
+
+function showPasswordGate(onSuccess) {
+    var container = document.getElementById('passwordGate');
+    if (!container) {
+        var main = document.querySelector('.main-container');
+        container = document.createElement('div');
+        container.id = 'passwordGate';
+        container.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:60vh;';
+        main.insertBefore(container, main.firstChild);
+    }
+    container.innerHTML =
+        '<div class="pw-gate-card fade-in">' +
+        '<div class="pw-gate-icon">🔐</div>' +
+        '<h2 class="pw-gate-title">' + escapeHTML(getSpaceName()) + '</h2>' +
+        '<p class="pw-gate-desc">这个空间已被主人设置密码保护<br>请输入密码进入</p>' +
+        '<div class="pw-gate-input-row" id="pwInputRow">' +
+        '<input type="password" id="pwGateInput" class="pw-gate-input" placeholder="输入密码..." autofocus autocomplete="off">' +
+        '<button class="btn btn-primary pw-gate-btn" id="pwGateBtn">进入我们的空间</button>' +
+        '</div>' +
+        '<p class="pw-gate-error" id="pwGateError" style="display:none;">密码不正确，请重试</p>' +
+        '</div>';
+
+    container.style.display = 'flex';
+    document.getElementById('homeHero').style.display = 'none';
+    document.getElementById('countdownCard').style.display = 'none';
+    var qn = document.querySelector('.quick-nav');
+    if (qn) qn.style.display = 'none';
+    var rd = document.getElementById('recentDiaries');
+    if (rd) rd.parentElement.style.display = 'none';
+
+    function handleSubmit() {
+        var input = document.getElementById('pwGateInput').value.trim();
+        if (!input) return;
+        var meta = getSpaceMeta();
+        hashPasswordSHA256(input).then(function(hash) {
+            if (hash === meta.passwordHash) {
+                setLoggedIn();
+                document.getElementById('passwordGate').style.display = 'none';
+                document.getElementById('homeHero').style.display = 'block';
+                var qn2 = document.querySelector('.quick-nav');
+                if (qn2) qn2.style.display = '';
+                var rd2 = document.getElementById('recentDiaries');
+                if (rd2) rd2.parentElement.style.display = '';
+                onSuccess();
+            } else {
+                var error = document.getElementById('pwGateError');
+                error.style.display = 'block';
+                var row = document.getElementById('pwInputRow');
+                row.classList.add('pw-shake');
+                setTimeout(function() { row.classList.remove('pw-shake'); }, 500);
+                document.getElementById('pwGateInput').value = '';
+                document.getElementById('pwGateInput').focus();
+            }
+        });
+    }
+
+    document.getElementById('pwGateBtn').addEventListener('click', handleSubmit);
+    document.getElementById('pwGateInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleSubmit();
+    });
+}
+
+function hidePasswordGate() {
+    var gate = document.getElementById('passwordGate');
+    if (gate) gate.style.display = 'none';
+    document.getElementById('homeHero').style.display = 'block';
+    document.getElementById('countdownCard').style.display = 'block';
+    var qn = document.querySelector('.quick-nav');
+    if (qn) qn.style.display = '';
+    var rd = document.getElementById('recentDiaries');
+    if (rd) rd.parentElement.style.display = '';
+}
+
 function showCreateSpaceModal() {
     showModal({
         title: '创建我们的空间',
-        bodyHTML: '<div class="form-group"><label class="form-label">空间名称（如：我们的故事）</label><input type="text" id="spaceNameInput" class="form-input" placeholder="为你们的空间起个名字"></div>',
+        bodyHTML:
+            '<div class="form-group"><label class="form-label">空间名称（如：我们的故事）</label><input type="text" id="spaceNameInput" class="form-input" placeholder="为你们的空间起个名字"></div>' +
+            '<div class="form-group"><label class="form-label">设置密码（4位以上，强烈建议）</label><input type="password" id="spacePasswordInput" class="form-input" placeholder="设置访问密码..." autocomplete="new-password"></div>' +
+            '<div class="form-group"><label class="form-label">确认密码</label><input type="password" id="spacePasswordConfirm" class="form-input" placeholder="再次输入密码" autocomplete="new-password"></div>' +
+            '<p style="font-size:0.78rem;color:var(--text-lighter);margin-top:-4px;">密码保护你们的私密空间，分享时需一并告知密码。<br>留空则不设置密码。</p>',
         onSave: function(close) {
             var name = document.getElementById('spaceNameInput').value.trim();
             if (!name) { alert('请输入空间名称'); return; }
+            var pw = document.getElementById('spacePasswordInput').value;
+            var pwConfirm = document.getElementById('spacePasswordConfirm').value;
+            if (pw && pw !== pwConfirm) { alert('两次密码不一致'); return; }
+            if (pw && pw.length < 4) { alert('密码至少需要4位'); return; }
             var hash = 'space' + Date.now().toString(36);
-            setSpaceMeta(name);
-            window.location.hash = hash;
-            close();
-            setTimeout(function() { window.location.reload(); }, 300);
+            if (pw) {
+                hashPasswordSHA256(pw).then(function(hashPwd) {
+                    setSpaceMeta(name, hashPwd);
+                    window.location.hash = hash;
+                    setLoggedIn();
+                    close();
+                    setTimeout(function() { window.location.reload(); }, 300);
+                });
+            } else {
+                setSpaceMeta(name);
+                window.location.hash = hash;
+                setLoggedIn();
+                close();
+                setTimeout(function() { window.location.reload(); }, 300);
+            }
         }
     });
 }
@@ -41,6 +147,7 @@ function showSpaceSwitcher() {
         html += '<div class="space-item' + (isCurrent ? ' space-current' : '') + '" onclick="switchToSpace(\'' + escapeHTML(s.key) + '\')">' +
             '<div style="font-weight:500;color:var(--text);">' + escapeHTML(s.name) + '</div>' +
             '<div style="font-size:.8rem;color:var(--text-lighter);">' + (s.created ? new Date(s.created).toLocaleDateString() : '') + '</div>' +
+            (s.hasPassword ? '<span class="space-pwd-badge">🔐 已加密</span>' : '') +
             (isCurrent ? '<div style="font-size:.75rem;color:var(--primary);margin-top:4px;">✓ 当前空间</div>' : '') +
             '</div>';
     });
