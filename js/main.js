@@ -287,7 +287,7 @@ function createImageUploadHTML(inputId, previewId, currentImage) {
         '<div class="upload-area" id="' + inputId + '_area">' +
         '<input type="file" accept="image/*" id="' + inputId + '" style="display:none;">' +
         '<div style="font-size:2rem;margin-bottom:6px;">📷</div>' +
-        '<div>点击上传图片（2MB以内）</div>' +
+        '<div>点击上传图片（5MB以内）</div>' +
         '</div>' +
         (currentImage ? '<div id="' + previewId + '" style="margin-top:12px;text-align:center;"><img src="' + currentImage + '" style="max-width:200px;max-height:120px;border-radius:8px;border:2px solid var(--accent-light);"></div>' : '<div id="' + previewId + '"></div>') +
         '</div>';
@@ -302,7 +302,7 @@ function bindImageUpload(inputId, previewId, callback) {
     input.addEventListener('change', function(e) {
         var file = e.target.files[0];
         if (!file) return;
-        if (file.size > 2 * 1024 * 1024) { alert('图片大小不能超过2MB'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('图片大小不能超过5MB，建议定期导出数据备份（localStorage总容量约5-10MB）'); return; }
         var reader = new FileReader();
         reader.onload = function(e) {
             var base64 = e.target.result;
