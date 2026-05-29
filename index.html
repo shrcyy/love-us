@@ -127,21 +127,9 @@
     <script src="js/data.js"></script>
     <script src="js/main.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var hash = getSpaceHash();
-
-            // If no hash, show space guide
-            if (!hash) {
-                document.getElementById('spaceGuide').style.display = 'block';
-                document.getElementById('homeHero').style.display = 'none';
-                document.getElementById('countdownCard').style.display = 'none';
-                return;
-            }
-
-            document.getElementById('spaceGuide').style.display = 'none';
-            document.getElementById('homeHero').style.display = 'block';
-
+        function initHomePage() {
             var data = APP_DATA;
+            document.getElementById('homeHero').style.display = 'block';
 
             if (!data.startDate) {
                 document.getElementById('countdownCard').style.display = 'none';
@@ -168,7 +156,6 @@
                 }
             }
 
-            // Recent diaries
             var diaries = data.diaries || [];
             var sorted = [].concat(diaries).sort(function(a,b) { return new Date(b.date) - new Date(a.date); });
             var recent = sorted.slice(0, 3);
@@ -189,6 +176,22 @@
             });
 
             addFAB(function() { showStartDateModal(); });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var hash = getSpaceHash();
+            if (!hash) {
+                document.getElementById('spaceGuide').style.display = 'block';
+                document.getElementById('homeHero').style.display = 'none';
+                document.getElementById('countdownCard').style.display = 'none';
+                return;
+            }
+            document.getElementById('spaceGuide').style.display = 'none';
+            checkAccess(function() {
+                initHomePage();
+            }, function() {
+                showPasswordGate(initHomePage);
+            });
         });
 
         function showStartDateModal() {
