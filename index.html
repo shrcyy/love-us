@@ -181,9 +181,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             var hash = getSpaceHash();
             if (!hash) {
-                document.getElementById('spaceGuide').style.display = 'block';
-                document.getElementById('homeHero').style.display = 'none';
-                document.getElementById('countdownCard').style.display = 'none';
+                window.location.href = 'welcome.html';
                 return;
             }
             document.getElementById('spaceGuide').style.display = 'none';
