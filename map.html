@@ -7,28 +7,73 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/leaflet.min.css">
     <style>
-        .map-wrapper { position:relative; width:100%; height:calc(100vh - var(--nav-height) - 120px); min-height:400px; border-radius:var(--radius); overflow:hidden; box-shadow:0 4px 24px var(--shadow); }
+        .map-wrapper { position:relative; width:100%; height:calc(100vh - var(--nav-height) - 160px); min-height:400px; border-radius:var(--radius); overflow:hidden; box-shadow:0 4px 24px var(--shadow); }
         #map { width:100%; height:100%; }
-        .map-stats-bar { display:flex; justify-content:center; gap:24px; padding:16px 20px; background:var(--white); border-radius:var(--radius); box-shadow:0 2px 12px var(--shadow); margin-bottom:16px; flex-wrap:wrap; }
+
+        .map-stats-bar { display:flex; justify-content:center; gap:24px; padding:16px 20px; background:var(--white); border-radius:var(--radius); box-shadow:0 2px 12px var(--shadow); margin-bottom:12px; flex-wrap:wrap; }
         .map-stat-item { text-align:center; }
         .map-stat-num { font-size:1.8rem; font-weight:700; color:var(--primary); font-family:var(--font-title); }
         .map-stat-label { font-size:0.85rem; color:var(--text-light); }
-        .leaflet-popup-content { font-family:var(--font-body); color:var(--text); min-width:200px; }
-        .leaflet-popup-content .popup-name { font-size:1.1rem; font-weight:700; color:var(--primary); margin-bottom:4px; }
-        .leaflet-popup-content .popup-date { font-size:0.85rem; color:var(--text-light); margin-bottom:6px; }
-        .leaflet-popup-content .popup-memory { font-size:0.9rem; color:var(--text); margin-bottom:8px; line-height:1.5; }
-        .leaflet-popup-content .popup-photo { max-width:100%; max-height:120px; border-radius:8px; margin-bottom:8px; }
-        .leaflet-popup-content .popup-actions { display:flex; gap:6px; flex-wrap:wrap; }
-        .leaflet-popup-content .popup-actions button { padding:4px 10px; border-radius:6px; border:1px solid var(--accent-light); background:var(--white); color:var(--text); cursor:pointer; font-size:0.8rem; transition:all 0.2s; }
-        .leaflet-popup-content .popup-actions button:hover { background:var(--secondary-light); }
-        .leaflet-popup-content .popup-actions .btn-check { color:var(--primary); border-color:var(--primary); }
-        .leaflet-popup-content .popup-actions .btn-check.checked { background:var(--primary); color:var(--white); }
-        .leaflet-popup-content .popup-actions .btn-delete { color:#e74c3c; border-color:#e74c3c; }
-        .checked-marker { filter:hue-rotate(90deg) saturate(1.5); }
+
+        /* Footprint stats card (floating at bottom of map) */
+        .footprint-card { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); border-radius:12px; padding:10px 20px; box-shadow:0 2px 16px rgba(0,0,0,0.12); z-index:1000; display:flex; gap:20px; align-items:center; font-size:0.85rem; pointer-events:none; }
+        .footprint-card span { white-space:nowrap; }
+        .footprint-card .fp-num { color:var(--primary); font-weight:700; font-size:1.1rem; }
+
+        /* Map legend */
+        .map-legend { position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.95); border-radius:10px; padding:10px 14px; z-index:999; box-shadow:0 2px 10px rgba(0,0,0,0.1); font-size:0.78rem; display:flex; flex-direction:column; gap:6px; user-select:none; }
+        .map-legend .leg-item { display:flex; align-items:center; gap:6px; }
+        .map-legend .leg-dot { width:14px; height:14px; border-radius:50%; display:inline-block; }
+
+        /* Custom zoom control */
+        .custom-zoom-btn { background:rgba(255,255,255,0.95); border:none; width:36px; height:36px; border-radius:10px; font-size:1.2rem; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; color:var(--text); transition:all 0.2s; }
+        .custom-zoom-btn:hover { background:var(--secondary-light); color:var(--primary); }
+        .custom-controls { position:absolute; left:12px; top:80px; display:flex; flex-direction:column; gap:4px; z-index:999; }
+        .home-china-btn { background:rgba(255,255,255,0.95); border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:10px; font-size:0.8rem; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.1); transition:all 0.2s; white-space:nowrap; }
+        .home-china-btn:hover { background:var(--primary); color:#fff; }
+
+        /* Bounce animation for newly added markers */
+        @keyframes markerBounce {
+            0% { margin-top:0; }
+            30% { margin-top:-16px; }
+            50% { margin-top:0; }
+            70% { margin-top:-8px; }
+            100% { margin-top:0; }
+        }
+        .marker-bounce .leaflet-marker-icon { animation:markerBounce 0.6s ease; }
+
+        /* Pulsing halo for checked markers */
+        .marker-pulse .leaflet-marker-icon { filter:drop-shadow(0 0 6px rgba(231,76,60,0.5)); }
+
+        /* Marker hover scale */
+        .leaflet-marker-icon { transition:transform 0.2s; }
+        .leaflet-marker-icon:hover { transform:scale(1.3); z-index:9999 !important; }
+
+        /* Custom popup */
+        .custom-popup .leaflet-popup-content-wrapper { border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.18); overflow:hidden; }
+        .custom-popup .leaflet-popup-content { font-family:var(--font-body); color:var(--text); margin:14px 16px; min-width:200px; max-width:260px; }
+        .custom-popup .leaflet-popup-tip { background:#fff; }
+        .popup-name { font-size:1.1rem; font-weight:700; color:var(--primary); margin-bottom:4px; }
+        .popup-date { font-size:0.8rem; color:var(--text-light); margin-bottom:8px; }
+        .popup-photo { max-width:100%; max-height:120px; border-radius:10px; margin-bottom:8px; object-fit:cover; }
+        .popup-memory { font-size:0.85rem; color:var(--text); margin-bottom:10px; line-height:1.5; }
+        .popup-actions { display:flex; gap:6px; flex-wrap:wrap; }
+        .popup-actions button { padding:5px 12px; border-radius:8px; border:1px solid var(--accent-light); background:var(--white); color:var(--text); cursor:pointer; font-size:0.78rem; transition:all 0.2s; }
+        .popup-actions button:hover { background:var(--secondary-light); }
+        .popup-actions .btn-check { color:var(--primary); border-color:var(--primary); }
+        .popup-actions .btn-check.checked { background:var(--primary); color:var(--white); }
+        .popup-actions .btn-delete { color:#e74c3c; border-color:#e74c3c; }
+        .popup-actions .btn-delete:hover { background:#fde8e8; }
+
+        /* Mobile */
         @media (max-width:768px) {
-            .map-wrapper { height:calc(100vh - var(--nav-height) - 80px); border-radius:0; }
-            .map-stats-bar { margin:0 8px 8px; padding:12px; gap:12px; }
+            .map-wrapper { height:calc(100vh - var(--nav-height) - 140px); border-radius:0; margin:0 -16px; }
+            .map-stats-bar { margin:0 8px 8px; padding:10px 12px; gap:12px; border-radius:10px; }
             .map-stat-num { font-size:1.4rem; }
+            .footprint-card { bottom:6px; padding:8px 14px; gap:12px; font-size:0.75rem; }
+            .footprint-card .fp-num { font-size:0.95rem; }
+            .map-legend { top:6px; right:6px; }
+            .custom-popup .leaflet-popup-content { max-width:220px; min-width:160px; }
         }
     </style>
 </head>
@@ -53,16 +98,34 @@
     </nav>
 
     <main class="main-container" style="max-width:100%;padding:0 16px;">
-        <section class="page-hero" style="padding:20px 0 10px;">
+        <section class="page-hero" style="padding:16px 0 6px;">
             <h1>我们的地图</h1>
             <p class="subtitle">一起走过的路，每一步都算数。</p>
         </section>
         <div class="map-stats-bar fade-in" id="mapStatsBar">
             <div class="map-stat-item"><div class="map-stat-num" id="totalPlaces">0</div><div class="map-stat-label">去过的地方</div></div>
             <div class="map-stat-item"><div class="map-stat-num" id="checkedPlaces">0</div><div class="map-stat-label">已打卡</div></div>
+            <div class="map-stat-item"><div class="map-stat-num" id="checkRate">0%</div><div class="map-stat-label">打卡率</div></div>
         </div>
         <div class="map-wrapper fade-in" id="mapWrapper">
             <div id="map"></div>
+            <!-- Legend -->
+            <div class="map-legend">
+                <div class="leg-item"><span class="leg-dot" style="background:#E74C3C;"></span> 已打卡</div>
+                <div class="leg-item"><span class="leg-dot" style="background:#FF8C94;"></span> 未打卡</div>
+            </div>
+            <!-- Custom controls -->
+            <div class="custom-controls">
+                <button class="custom-zoom-btn" onclick="map.zoomIn()" title="放大">+</button>
+                <button class="custom-zoom-btn" onclick="map.zoomOut()" title="缩小">−</button>
+                <button class="home-china-btn" onclick="goChinaView()" title="回到中国视图">🏠 中国</button>
+            </div>
+            <!-- Footprint stats -->
+            <div class="footprint-card" id="footprintCard">
+                <span>已去过 <strong class="fp-num" id="fpCities">0</strong> 个城市</span>
+                <span style="color:var(--text-light);">|</span>
+                <span>最近：<span id="fpLatest" style="color:var(--primary);">暂无</span></span>
+            </div>
         </div>
     </main>
 
@@ -77,20 +140,29 @@
         var map;
         var markers = {};
         var currentPlaces = [];
+        var newMarkerId = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             initMap();
             refreshPlaces();
             addFAB(function() { startAddPlaceMode(); });
+            // Hide native zoom control
+            map.zoomControl.remove();
         });
 
         function initMap() {
-            map = L.map('map', { zoomControl: true }).setView([35.5, 105], 5);
-            L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            map = L.map('map', { zoomControl: false }).setView([35.5, 105], 5);
+            // style=7: softer pastel palette; fallback style=8
+            var tileUrl = 'https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}';
+            L.tileLayer(tileUrl, {
                 attribution: '&copy; 高德地图',
                 maxZoom: 18
             }).addTo(map);
             setTimeout(function() { map.invalidateSize(); }, 300);
+        }
+
+        function goChinaView() {
+            map.flyTo([35.5, 105], 5, { duration: 1.5 });
         }
 
         function refreshPlaces() {
@@ -98,24 +170,47 @@
             Object.keys(markers).forEach(function(k) { map && map.removeLayer(markers[k]); });
             markers = {};
             currentPlaces.forEach(function(place) {
-                addMarker(place);
+                addMarker(place, false);
             });
-            document.getElementById('totalPlaces').textContent = currentPlaces.length;
-            document.getElementById('checkedPlaces').textContent = currentPlaces.filter(function(p) { return p.checked; }).length;
+            updateStats();
         }
 
-        function addMarker(place) {
+        function updateStats() {
+            var total = currentPlaces.length;
+            var checked = currentPlaces.filter(function(p) { return p.checked; }).length;
+            document.getElementById('totalPlaces').textContent = total;
+            document.getElementById('checkedPlaces').textContent = checked;
+            document.getElementById('checkRate').textContent = total > 0 ? Math.round(checked / total * 100) + '%' : '0%';
+
+            // Footprint card
+            var cityNames = [];
+            currentPlaces.forEach(function(p) {
+                var name = p.name.replace(/省|市|县|区|特别行政区|自治区/g, '').trim();
+                if (name && cityNames.indexOf(name) === -1) cityNames.push(name);
+            });
+            document.getElementById('fpCities').textContent = cityNames.length;
+
+            var sorted = [].concat(currentPlaces).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+            document.getElementById('fpLatest').textContent = sorted.length > 0 ? sorted[0].name : '暂无';
+        }
+
+        function addMarker(place, animate) {
             if (!map) return;
-            var heartSVG = place.checked
+            var checked = place.checked;
+            var heartSVG = checked
                 ? '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><path d="M18 33 C5 23 0 15 0 8 C0 2 5 0 10 0 C13 0 16 2 18 4 C20 2 23 0 26 0 C31 0 36 2 36 8 C36 15 31 23 18 33Z" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5"/></svg>'
                 : '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><path d="M18 33 C5 23 0 15 0 8 C0 2 5 0 10 0 C13 0 16 2 18 4 C20 2 23 0 26 0 C31 0 36 2 36 8 C36 15 31 23 18 33Z" fill="#FF8C94" stroke="#E6737C" stroke-width="1.5"/></svg>';
             var icon = L.icon({
                 iconUrl: 'data:image/svg+xml,' + encodeURIComponent(heartSVG),
                 iconSize: [36, 36],
                 iconAnchor: [18, 36],
-                popupAnchor: [0, -36]
+                popupAnchor: [0, -36],
+                className: checked ? 'marker-pulse' : ''
             });
             var marker = L.marker([place.lat, place.lng], { icon: icon, draggable: true }).addTo(map);
+            if (animate) {
+                marker._icon && marker._icon.parentElement && marker._icon.parentElement.classList.add('marker-bounce');
+            }
             marker.bindPopup(buildPopupContent(place), { maxWidth: 280, className: 'custom-popup' });
             marker.on('dragend', function(e) {
                 var pos = e.target.getLatLng();
@@ -132,7 +227,7 @@
         function buildPopupContent(place) {
             var photoHTML = place.photo ? '<img class="popup-photo" src="' + place.photo + '" loading="lazy" alt="">' : '';
             var checkedClass = place.checked ? ' checked' : '';
-            var checkedText = place.checked ? '已打卡' : '打卡';
+            var checkedText = place.checked ? '✓ 已打卡' : '打卡';
             return '<div class="popup-name">' + escapeHTML(place.name) + '</div>' +
                 '<div class="popup-date">' + formatDate(place.date) + '</div>' +
                 photoHTML +
@@ -180,7 +275,7 @@
             map.getContainer().style.cursor = 'crosshair';
             var hint = document.createElement('div');
             hint.id = 'mapAddHint';
-            hint.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--primary);color:white;padding:8px 20px;border-radius:20px;z-index:1000;font-size:0.9rem;pointer-events:none;';
+            hint.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:white;padding:8px 20px;border-radius:20px;z-index:1001;font-size:0.9rem;pointer-events:none;box-shadow:0 2px 12px rgba(255,140,148,0.3);';
             hint.textContent = '在地图上点击选择位置';
             document.getElementById('mapWrapper').appendChild(hint);
 
@@ -199,7 +294,7 @@
                 title: '添加地点',
                 wide: true,
                 bodyHTML:
-                    '<div class="form-group"><label class="form-label">地点名称</label><input type="text" id="placeName" class="form-input" placeholder="如：北京"></div>' +
+                    '<div class="form-group"><label class="form-label">地点名称</label><input type="text" id="placeName" class="form-input" placeholder="如：北京" autofocus></div>' +
                     '<div class="form-group"><label class="form-label">日期</label><input type="date" id="placeDate" class="form-input" value="' + getTodayDateStr() + '"></div>' +
                     '<div class="form-group"><label class="form-label">回忆描述</label><textarea id="placeMemory" class="form-textarea" rows="2" placeholder="在这里发生了什么..."></textarea></div>' +
                     '<div class="form-group"><label class="form-label">照片（可选）</label>' + createImageUploadHTML('placePhotoInput', 'placePhotoPreview', '') + '</div>' +
