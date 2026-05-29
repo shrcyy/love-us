@@ -90,18 +90,35 @@
 
         function updateShareLink() {
             var hash = getSpaceHash();
-            var linkInput = document.getElementById('shareLink');
-            if (!linkInput) return;
             var baseUrl = window.location.origin + window.location.pathname.replace(/about\.html$/, 'index.html');
             var link = hash ? baseUrl + '#' + hash : baseUrl + '#' + 'lovestory' + Date.now().toString(36);
             document.getElementById('shareLinkInput').value = link;
+            var meta = getSpaceMeta();
+            var pwdHintEl = document.getElementById('sharePwdHint');
+            if (meta && meta.passwordHash) {
+                if (pwdHintEl) {
+                    pwdHintEl.style.display = 'block';
+                } else {
+                    var el = document.createElement('p');
+                    el.id = 'sharePwdHint';
+                    el.style.cssText = 'color:var(--primary);font-size:0.85rem;margin-top:8px;';
+                    el.textContent = '🔐 此空间已设置密码，分享链接时请一并告知对方密码';
+                    document.getElementById('shareLinkInput').parentElement.parentElement.appendChild(el);
+                }
+            } else {
+                if (pwdHintEl) pwdHintEl.style.display = 'none';
+            }
         }
 
         function copyShareLink() {
             var input = document.getElementById('shareLinkInput');
             input.select();
             document.execCommand('copy');
-            alert('链接已复制！分享给你的另一半吧~');
+            var meta = getSpaceMeta();
+            var msg = meta && meta.passwordHash
+                ? '链接已复制！分享时请一并告知密码（关闭浏览器后需重新输入）。'
+                : '链接已复制！分享给你的另一半吧~';
+            alert(msg);
         }
 
         function handleImport(event) {
