@@ -68,6 +68,8 @@
                 <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImport(event)">
             </div>
 
+            <div id="storageInfo" style="text-align:center; margin-top:12px; font-size:0.78rem; color:var(--text-lighter);"></div>
+
             <div style="text-align:center; margin-top:16px;">
                 <button class="btn btn-outline" onclick="showSpaceSwitcher()">🔄 切换空间</button>
                 <button class="btn btn-outline" onclick="showCreateSpaceModal()">➕ 新建空间</button>
@@ -121,6 +123,21 @@
             alert(msg);
         }
 
+        function displayStorageInfo() {
+            var key = getStorageKey();
+            var raw = localStorage.getItem(key);
+            if (!raw) {
+                document.getElementById('storageInfo').textContent = '';
+                return;
+            }
+            var sizeKB = (new Blob([raw]).size / 1024).toFixed(1);
+            var estimatedMax = 5000; // ~5MB typical localStorage limit
+            var pct = ((sizeKB / estimatedMax) * 100).toFixed(0);
+            document.getElementById('storageInfo').innerHTML =
+                '当前空间数据约 <strong>' + sizeKB + ' KB</strong>（约占 localStorage 的 ' + pct + '%）' +
+                (sizeKB > 3000 ? '<br>⚠️ 数据较大，建议导出备份以防丢失' : '');
+        }
+
         function handleImport(event) {
             var file = event.target.files[0];
             if (!file) return;
@@ -138,6 +155,9 @@
 
         function refreshAbout() {
             var data = APP_DATA;
+
+            // Storage usage
+            displayStorageInfo();
 
             var cards = document.getElementById('aboutCards');
             cards.innerHTML =
