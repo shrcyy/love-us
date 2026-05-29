@@ -53,24 +53,58 @@ function getSpaceName() {
     return decodeURIComponent(hash).substring(0, 20) + (hash.length > 20 ? '...' : '');
 }
 
-function setSpaceMeta(name) {
+function setSpaceMeta(name, passwordHash) {
     var key = getStorageKey() + '_meta';
-    localStorage.setItem(key, JSON.stringify({ name: name, created: new Date().toISOString() }));
+    var meta = { name: name, created: new Date().toISOString() };
+    if (passwordHash) meta.passwordHash = passwordHash;
+    localStorage.setItem(key, JSON.stringify(meta));
+}
+
+function getSpaceMeta() {
+    var key = getStorageKey() + '_meta';
+    var meta = localStorage.getItem(key);
+    if (meta) {
+        try { return JSON.parse(meta); } catch (e) { return null; }
+    }
+    return null;
+}
+
+function isLoggedIn() {
+    return sessionStorage.getItem('loveus_login_' + getSpaceHash()) === '1';
+}
+
+function setLoggedIn() {
+    sessionStorage.setItem('loveus_login_' + getSpaceHash(), '1');
+}
+
+function clearLogin() {
+    sessionStorage.removeItem('loveus_login_' + getSpaceHash());
+}
+
+function hashPasswordSHA256(password) {
+    var encoder = new TextEncoder();
+    var data = encoder.encode(password);
+    return crypto.subtle.digest('SHA-256', data).then(function(hashBuffer) {
+        var hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+    });
 }
 
 function listAllSpaces() {
     var spaces = [];
     for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
-        if (key.startsWith('loveus_data_') && !key.includes('_meta')) {
+        if (key.startsWith('loveus_data_') && !key.endsWith('_meta')) {
             var spaceKey = key.replace('loveus_data_', '');
             if (spaceKey === 'default') continue;
             var metaKey = key + '_meta';
             var meta = localStorage.getItem(metaKey);
+            var parsed = meta ? JSON.parse(meta) : null;
             spaces.push({
                 key: spaceKey,
-                name: meta ? JSON.parse(meta).name : spaceKey,
-                created: meta ? JSON.parse(meta).created : null
+                name: parsed ? parsed.name : spaceKey,
+                created: parsed ? parsed.created : null,
+                hasPassword: !!(parsed && parsed.passwordHash)
             });
         }
     }
