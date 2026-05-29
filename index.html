@@ -179,8 +179,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            var hash = getSpaceHash();
-            if (!hash) {
+            var rawHash = window.location.hash.substring(1);
+            if (!rawHash) {
                 window.location.href = 'welcome.html';
                 return;
             }
