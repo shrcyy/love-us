@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -78,6 +78,16 @@
     </style>
 </head>
 <body class="no-petals">
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -103,9 +113,9 @@
             <p class="subtitle">一起走过的路，每一步都算数。</p>
         </section>
         <div class="map-stats-bar fade-in" id="mapStatsBar">
-            <div class="map-stat-item"><div class="map-stat-num" id="totalPlaces">0</div><div class="map-stat-label">去过的地方</div></div>
+            <div class="map-stat-item"><div class="map-stat-num" id="totalPlaces">0</div><div class="map-stat-label">携手走过 地点</div></div>
+            <div class="map-stat-item"><div class="map-stat-num" id="totalCities">0</div><div class="map-stat-label">座城市</div></div>
             <div class="map-stat-item"><div class="map-stat-num" id="checkedPlaces">0</div><div class="map-stat-label">已打卡</div></div>
-            <div class="map-stat-item"><div class="map-stat-num" id="checkRate">0%</div><div class="map-stat-label">打卡率</div></div>
         </div>
         <div class="map-wrapper fade-in" id="mapWrapper">
             <div id="map"></div>
@@ -130,10 +140,14 @@
     </main>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script src="js/leaflet.min.js"></script>
     <script>
@@ -180,14 +194,16 @@
             var checked = currentPlaces.filter(function(p) { return p.checked; }).length;
             document.getElementById('totalPlaces').textContent = total;
             document.getElementById('checkedPlaces').textContent = checked;
-            document.getElementById('checkRate').textContent = total > 0 ? Math.round(checked / total * 100) + '%' : '0%';
 
-            // Footprint card
+            // Cities count
             var cityNames = [];
             currentPlaces.forEach(function(p) {
                 var name = p.name.replace(/省|市|县|区|特别行政区|自治区/g, '').trim();
                 if (name && cityNames.indexOf(name) === -1) cityNames.push(name);
             });
+            document.getElementById('totalCities').textContent = cityNames.length;
+
+            // Footprint card
             document.getElementById('fpCities').textContent = cityNames.length;
 
             var sorted = [].concat(currentPlaces).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
@@ -350,5 +366,14 @@
             bindImageUpload('placePhotoEditInput', 'placePhotoEditPreview', function(b64) { selectedPhoto = b64; });
         }
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
