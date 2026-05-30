@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -49,6 +59,72 @@
             <div class="stats-grid" id="statsGrid"></div>
         </section>
 
+        <!-- 个性化设置 -->
+        <section class="fade-in" style="margin-top:48px; max-width:600px; margin-left:auto; margin-right:auto;">
+            <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">个性化设置</h2>
+
+            <div class="card" style="background:var(--secondary-light); padding:24px; margin-bottom:16px;">
+
+                <!-- 主题切换 -->
+                <div class="pref-section">
+                    <div class="pref-section-title">🎨 主题配色</div>
+                    <div class="theme-grid" id="themeGrid">
+                        <div class="theme-option" data-theme="pink" title="暖粉" style="background:linear-gradient(135deg,#FF8C94,#FFB3B8);"></div>
+                        <div class="theme-option" data-theme="blue" title="天空蓝" style="background:linear-gradient(135deg,#5B9BD5,#87BAE8);"></div>
+                        <div class="theme-option" data-theme="mint" title="薄荷绿" style="background:linear-gradient(135deg,#5CB8A5,#88D0C2);"></div>
+                        <div class="theme-option" data-theme="purple" title="薰衣草紫" style="background:linear-gradient(135deg,#B08BBB,#CEB2D6);"></div>
+                        <div class="theme-option" data-theme="brown" title="奶茶棕" style="background:linear-gradient(135deg,#C9A87C,#DDC4A0);"></div>
+                    </div>
+                </div>
+
+                <!-- 字体大小 -->
+                <div class="pref-section">
+                    <div class="pref-section-title">🔤 字体大小</div>
+                    <div class="font-size-options" id="fontSizeOptions">
+                        <button class="font-size-btn" data-size="small">小</button>
+                        <button class="font-size-btn active" data-size="medium">中</button>
+                        <button class="font-size-btn" data-size="large">大</button>
+                    </div>
+                </div>
+
+                <!-- 背景壁纸 -->
+                <div class="pref-section">
+                    <div class="pref-section-title">🖼️ 背景壁纸</div>
+                    <div class="bg-grid" id="bgGrid">
+                        <div>
+                            <div class="bg-preview" data-wallpaper="gradient-warm" title="暖粉渐变" style="background:linear-gradient(135deg,#FF9A9E,#FAD0C4);"></div>
+                            <div style="font-size:0.7rem;color:var(--text-light);text-align:center;">暖粉渐变</div>
+                        </div>
+                        <div>
+                            <div class="bg-preview" data-wallpaper="gradient-sky" title="天空渐变" style="background:linear-gradient(135deg,#A1C4FD,#C2E9FB);"></div>
+                            <div style="font-size:0.7rem;color:var(--text-light);text-align:center;">天空渐变</div>
+                        </div>
+                        <div>
+                            <div class="bg-preview" data-wallpaper="gradient-mint" title="薄荷渐变" style="background:linear-gradient(135deg,#A8E6CF,#DCEDC1);"></div>
+                            <div style="font-size:0.7rem;color:var(--text-light);text-align:center;">薄荷渐变</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;margin-top:8px;">
+                        <button class="btn btn-outline" onclick="document.getElementById('wallpaperUpload').click()" style="font-size:0.8rem;">📁 上传自定义壁纸</button>
+                        <button class="btn btn-outline" id="btnResetWallpaper" onclick="resetWallpaper()" style="font-size:0.8rem;display:none;">↩ 恢复默认</button>
+                        <input type="file" id="wallpaperUpload" accept="image/*" style="display:none;" onchange="handleWallpaperUpload(event)">
+                    </div>
+                </div>
+
+                <!-- 音效开关 -->
+                <div class="pref-section">
+                    <div class="pref-section-title">🔊 交互音效</div>
+                    <div style="text-align:center;">
+                        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-size:0.9rem;">
+                            <input type="checkbox" id="soundToggle" onchange="toggleSound()" checked>
+                            <span id="soundToggleLabel">音效已开启</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
         <!-- 分享与数据管理 -->
         <section class="fade-in" style="margin-top:48px; max-width:600px; margin-left:auto; margin-right:auto;">
             <h2 style="font-family:var(--font-title);color:var(--primary);margin-bottom:20px;text-align:center;">分享 & 数据管理</h2>
@@ -60,6 +136,15 @@
                     <input type="text" id="shareLinkInput" readonly style="flex:1;max-width:360px;padding:8px 12px;border-radius:8px;border:1px solid var(--accent-light);background:var(--white);color:var(--text);font-size:0.85rem;">
                     <button class="btn btn-primary" onclick="copyShareLink()" style="font-size:0.85rem;">复制链接</button>
                 </div>
+            </div>
+
+            <!-- 云端同步状态 -->
+            <div class="card" id="syncStatusCard" style="background:var(--secondary-light); padding:20px 24px; margin-bottom:16px; text-align:center;">
+                <div style="font-size:1rem; color:var(--text); margin-bottom:8px;">☁️ 云端同步状态</div>
+                <div id="syncStatusText" style="color:var(--text-light); font-size:0.85rem; margin-bottom:4px;">正在检查…</div>
+                <div id="syncTimeText" style="color:var(--text-lighter); font-size:0.78rem; margin-bottom:10px;"></div>
+                <button class="btn btn-outline" id="btnSyncNow" onclick="triggerManualSync()" style="font-size:0.85rem;">🔄 立即同步</button>
+                <div id="syncToast" style="color:var(--primary); font-size:0.8rem; margin-top:6px; display:none;"></div>
             </div>
 
             <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
@@ -78,16 +163,22 @@
     </main>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             refreshAbout();
             updateShareLink();
             addFAB(function() { showEditAboutModal(); });
+            initSyncUI();
+            initPersonalization();
         });
 
         function updateShareLink() {
@@ -282,6 +373,224 @@
                 }
             });
         }
+
+        /* ================================================================
+         * 云端同步状态 UI
+         * ================================================================ */
+
+        var _syncTimer = null;
+
+        function initSyncUI() {
+            updateSyncStatusUI('正在连接云端…', '');
+            // 初始化云端同步
+            if (typeof initCloudSync === 'function') {
+                initCloudSync().then(function(result) {
+                    var statusText = result.from === 'cloud'
+                        ? '已从云端同步数据'
+                        : '使用本地数据（' + result.message + '）';
+                    updateSyncStatusUI(statusText, '');
+                });
+            } else {
+                updateSyncStatusUI('云端模块未加载，仅使用本地存储', '');
+            }
+        }
+
+        function updateSyncStatusUI(statusText, timeText) {
+            var statusEl = document.getElementById('syncStatusText');
+            var timeEl = document.getElementById('syncTimeText');
+            if (statusEl) statusEl.textContent = statusText;
+
+            if (!timeText && typeof cloudGetLastSyncTime === 'function') {
+                var t = cloudGetLastSyncTime();
+                if (t) {
+                    var d = new Date(t);
+                    timeText = '最近同步：' + d.toLocaleString('zh-CN');
+                } else {
+                    timeText = '尚未同步';
+                }
+            }
+            if (timeEl) timeEl.textContent = timeText;
+        }
+
+        function triggerManualSync() {
+            if (typeof cloudSyncNow !== 'function') {
+                showSyncToast('云端模块未加载');
+                return;
+            }
+
+            var btn = document.getElementById('btnSyncNow');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ 同步中…'; }
+            updateSyncStatusUI('正在同步…', '');
+
+            cloudSyncNow('main').then(function(result) {
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 立即同步'; }
+                if (result.synced) {
+                    updateSyncStatusUI('同步成功', '最近同步：刚刚');
+                    showSyncToast('同步成功！');
+                } else {
+                    updateSyncStatusUI('同步失败', result.message);
+                    showSyncToast('同步失败：' + result.message);
+                }
+            });
+        }
+
+        function showSyncToast(msg) {
+            var el = document.getElementById('syncToast');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.display = 'block';
+            if (_syncTimer) clearTimeout(_syncTimer);
+            _syncTimer = setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        /* ================================================================
+         * 个性化设置 UI
+         * ================================================================ */
+
+        function initPersonalization() {
+            var prefs = window.getAllPrefs ? window.getAllPrefs() : { theme: 'pink', fontSize: 'medium', wallpaper: 'gradient-warm', soundEnabled: true };
+
+            // Theme selection
+            var themeGrid = document.getElementById('themeGrid');
+            if (themeGrid) {
+                var themeOpts = themeGrid.querySelectorAll('.theme-option');
+                themeOpts.forEach(function(opt) {
+                    var t = opt.getAttribute('data-theme');
+                    if (t === prefs.theme) opt.classList.add('selected');
+                    opt.addEventListener('click', function() {
+                        themeOpts.forEach(function(o) { o.classList.remove('selected'); });
+                        opt.classList.add('selected');
+                        setPref('theme', t);
+                        document.documentElement.setAttribute('data-theme', t);
+                        if (window.playClick) playClick();
+                    });
+                });
+            }
+
+            // Font size
+            var fontSizeOptions = document.getElementById('fontSizeOptions');
+            if (fontSizeOptions) {
+                var sizeBtns = fontSizeOptions.querySelectorAll('.font-size-btn');
+                sizeBtns.forEach(function(btn) {
+                    var s = btn.getAttribute('data-size');
+                    if (s === prefs.fontSize) {
+                        sizeBtns.forEach(function(b) { b.classList.remove('active'); });
+                        btn.classList.add('active');
+                    }
+                    btn.addEventListener('click', function() {
+                        sizeBtns.forEach(function(b) { b.classList.remove('active'); });
+                        btn.classList.add('active');
+                        setPref('fontSize', s);
+                        var sizes = { small: '14px', medium: '16px', large: '18px' };
+                        document.documentElement.style.fontSize = sizes[s] || '16px';
+                        if (window.playClick) playClick();
+                    });
+                });
+            }
+
+            // Wallpaper
+            var bgGrid = document.getElementById('bgGrid');
+            if (bgGrid) {
+                var bgPreviews = bgGrid.querySelectorAll('.bg-preview');
+                bgPreviews.forEach(function(pv) {
+                    var wp = pv.getAttribute('data-wallpaper');
+                    if (wp === prefs.wallpaper) pv.classList.add('selected');
+                    pv.addEventListener('click', function() {
+                        bgPreviews.forEach(function(p) { p.classList.remove('selected'); });
+                        pv.classList.add('selected');
+                        setPref('wallpaper', wp);
+                        applyWallpaper(wp);
+                        document.getElementById('btnResetWallpaper').style.display = 'none';
+                        if (window.playClick) playClick();
+                    });
+                });
+            }
+
+            // Custom wallpaper state
+            var currentWP = prefs.wallpaper;
+            if (currentWP && currentWP.startsWith('custom:')) {
+                var resetBtn = document.getElementById('btnResetWallpaper');
+                if (resetBtn) resetBtn.style.display = 'inline-block';
+            }
+
+            // Sound toggle
+            var soundToggle = document.getElementById('soundToggle');
+            var soundLabel = document.getElementById('soundToggleLabel');
+            if (soundToggle) {
+                soundToggle.checked = prefs.soundEnabled !== false;
+                if (soundLabel) {
+                    soundLabel.textContent = soundToggle.checked ? '音效已开启' : '音效已关闭';
+                }
+            }
+        }
+
+        function toggleSound() {
+            var toggle = document.getElementById('soundToggle');
+            var label = document.getElementById('soundToggleLabel');
+            var enabled = toggle.checked;
+            setPref('soundEnabled', enabled);
+            if (label) label.textContent = enabled ? '音效已开启' : '音效已关闭';
+        }
+
+        function applyWallpaper(wp) {
+            var bgValue = window.getWallpaperValue ? window.getWallpaperValue(wp) : '';
+            if (wp && wp.startsWith('custom:')) {
+                document.body.style.backgroundImage = 'url(' + bgValue + ')';
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+                document.body.style.backgroundRepeat = 'no-repeat';
+            } else {
+                document.body.style.background = bgValue;
+                document.body.style.backgroundAttachment = 'fixed';
+            }
+        }
+
+        function handleWallpaperUpload(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { alert('壁纸图片不能超过 5MB'); event.target.value = ''; return; }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var dataURL = e.target.result;
+                setPref('wallpaper', 'custom:' + dataURL);
+                applyWallpaper('custom:' + dataURL);
+                document.getElementById('btnResetWallpaper').style.display = 'inline-block';
+                // Deselect all preset wallpapers
+                var bgGrid = document.getElementById('bgGrid');
+                if (bgGrid) {
+                    bgGrid.querySelectorAll('.bg-preview').forEach(function(p) { p.classList.remove('selected'); });
+                }
+                if (window.playClick) playClick();
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function resetWallpaper() {
+            var defaultWP = 'gradient-warm';
+            setPref('wallpaper', defaultWP);
+            applyWallpaper(defaultWP);
+            document.getElementById('btnResetWallpaper').style.display = 'none';
+            // Select default wallpaper
+            var bgGrid = document.getElementById('bgGrid');
+            if (bgGrid) {
+                bgGrid.querySelectorAll('.bg-preview').forEach(function(p) {
+                    p.classList.remove('selected');
+                    if (p.getAttribute('data-wallpaper') === defaultWP) p.classList.add('selected');
+                });
+            }
+            if (window.playClick) playClick();
+        }
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
