@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -35,25 +45,55 @@
             <div style="margin-top:8px;"><span style="color:var(--text-light);">已完成愿望</span></div>
             <div class="progress-bar" style="margin-top:14px;"><div class="progress-fill" id="wishProgress" style="width:0%;"></div></div>
         </div>
+        <div class="wish-filter fade-in" id="wishFilter">
+            <button class="wish-filter-btn active" data-filter="all">全部</button>
+            <button class="wish-filter-btn" data-filter="todo">待完成</button>
+            <button class="wish-filter-btn" data-filter="done">已完成</button>
+        </div>
         <div class="wishlist-grid fade-in" id="wishlistGrid"></div>
     </main>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
+        var currentWishFilter = 'all';
+
         document.addEventListener('DOMContentLoaded', () => {
+            initWishFilter();
             refreshWishes();
             addFAB(() => showAddWishModal());
         });
 
+        function initWishFilter() {
+            document.querySelectorAll('#wishFilter .wish-filter-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#wishFilter .wish-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    currentWishFilter = btn.dataset.filter;
+                    refreshWishes();
+                });
+            });
+        }
+
         function refreshWishes() {
-            const wishes = APP_DATA.wishes;
-            const doneCount = wishes.filter(w => w.done).length;
-            const total = wishes.length;
+            var allWishes = APP_DATA.wishes;
+            var wishes = allWishes;
+            if (currentWishFilter === 'todo') {
+                wishes = allWishes.filter(function(w) { return !w.done; });
+            } else if (currentWishFilter === 'done') {
+                wishes = allWishes.filter(function(w) { return w.done; });
+            }
+
+            const doneCount = allWishes.filter(w => w.done).length;
+            const total = allWishes.length;
             const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
             document.getElementById('wishStats').textContent = `${doneCount} / ${total}`;
             document.getElementById('wishProgress').style.width = pct + '%';
@@ -77,8 +117,13 @@
                     toggleWishDone(w.id);
                 });
                 card.appendChild(createCardActions(
-                    () => showEditWishModal(w),
-                    () => showConfirm('确定要删除这个愿望吗？', () => deleteWish(w.id))
+                    () => { if (typeof playClick === 'function') playClick(); showEditWishModal(w); },
+                    () => {
+                        showConfirm('确定要删除愿望「' + w.name + '」吗？此操作不可撤销。', () => {
+                            if (typeof playDelete === 'function') playDelete();
+                            deleteWish(w.id);
+                        });
+                    }
                 ));
                 grid.appendChild(card);
             });
@@ -141,5 +186,14 @@
             refreshWishes();
         }
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
