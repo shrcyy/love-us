@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -35,10 +45,14 @@
     </main>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
         let currentAnniversaries = [];
@@ -46,6 +60,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             refreshAnniversaries();
             addFAB(() => showAddAnniversaryModal());
+            checkAnniversaryNotifications();
         });
 
         function refreshAnniversaries() {
@@ -162,6 +177,66 @@
                 });
             });
         }
+
+        /* ===== 纪念日推送通知 ===== */
+        function checkAnniversaryNotifications() {
+            if (!('Notification' in window)) return;
+
+            const anns = APP_DATA.anniversaries || [];
+            const today = new Date(); today.setHours(0,0,0,0);
+            const thresholds = [7, 3, 1];
+            const upcoming = [];
+
+            thresholds.forEach(function(days) {
+                anns.forEach(function(ann) {
+                    var t = new Date(ann.date);
+                    t.setFullYear(today.getFullYear());
+                    if (t <= today) t.setFullYear(today.getFullYear() + 1);
+                    var diff = Math.ceil((t - today) / (1000 * 60 * 60 * 24));
+                    if (diff === days) {
+                        upcoming.push({ ann: ann, days: diff });
+                    }
+                });
+            });
+
+            if (upcoming.length === 0) return;
+
+            // Request permission and notify
+            if (Notification.permission === 'granted') {
+                sendNotifications(upcoming);
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(function(perm) {
+                    if (perm === 'granted') {
+                        sendNotifications(upcoming);
+                    }
+                });
+            }
+        }
+
+        function sendNotifications(upcoming) {
+            upcoming.forEach(function(item) {
+                var ann = item.ann;
+                var body = ann.icon + ' ' + ann.name + ' — 还有 ' + item.days + ' 天到！';
+                if (ann.desc) body += '\n' + ann.desc;
+                var n = new Notification('纪念日提醒', {
+                    body: body,
+                    icon: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text font-size="48" y="52">💕</text></svg>'),
+                    tag: 'anniversary-' + ann.id,
+                    requireInteraction: false
+                });
+                setTimeout(function() { n.close(); }, 8000);
+                if (typeof playNotification === 'function') playNotification();
+            });
+        }
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
