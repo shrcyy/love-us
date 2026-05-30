@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -31,6 +41,13 @@
             <h1>相册墙</h1>
             <p class="subtitle">每一张照片，都是我们共同的回忆。</p>
         </section>
+
+        <!-- 相册导航栏 -->
+        <div class="album-bar fade-in" id="albumBar">
+            <button class="album-tag" data-album="all">全部</button>
+            <button class="btn btn-outline btn-sm" onclick="showCreateAlbumModal()">📁 新建相册</button>
+        </div>
+
         <div class="filter-bar fade-in" id="filterBar"></div>
         <div class="photo-grid fade-in" id="photoGrid"></div>
     </main>
@@ -41,28 +58,123 @@
     </div>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
         var allTags = [];
         var currentPhotos = [];
+        var currentAlbumId = 'all';
+        var currentTag = 'all';
 
         document.addEventListener('DOMContentLoaded', function() {
+            initAlbums();
             refreshPhotos();
             addFAB(function() { showAddPhotoModal(); });
         });
 
+        /* ===== 子相册管理 ===== */
+        function initAlbums() {
+            if (!APP_DATA.albums) APP_DATA.albums = [];
+        }
+
+        function getAlbums() {
+            return APP_DATA.albums || [];
+        }
+
+        function renderAlbumBar() {
+            var bar = document.getElementById('albumBar');
+            var albums = getAlbums();
+            var html = '<button class="album-tag' + (currentAlbumId === 'all' ? ' active' : '') + '" data-album="all">全部</button>';
+            albums.forEach(function(a) {
+                var count = (APP_DATA.photos || []).filter(function(p) { return p.albumId === a.id; }).length;
+                html += '<button class="album-tag' + (currentAlbumId === a.id ? ' active' : '') + '" data-album="' + a.id + '">' +
+                    escapeHTML(a.name) + '<span class="album-tag-count">' + count + '</span></button>';
+            });
+            html += '<button class="btn btn-outline btn-sm" onclick="showCreateAlbumModal()">📁 新建相册</button>';
+            bar.innerHTML = html;
+
+            bar.querySelectorAll('.album-tag').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    bar.querySelectorAll('.album-tag').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    currentAlbumId = btn.dataset.album;
+                    refreshPhotos();
+                });
+            });
+        }
+
+        function showCreateAlbumModal() {
+            showModal({
+                title: '新建相册',
+                bodyHTML:
+                    '<div class="form-group"><label class="form-label">相册名称</label><input type="text" id="albumName" class="form-input" placeholder="如：我们的旅行"></div>',
+                onSave: function(close) {
+                    var name = document.getElementById('albumName').value.trim();
+                    if (!name) { alert('请输入相册名称'); return; }
+                    var newAlbum = { id: Date.now(), name: name, createdAt: new Date().toISOString() };
+                    if (!APP_DATA.albums) APP_DATA.albums = [];
+                    APP_DATA.albums.push(newAlbum);
+                    saveData(APP_DATA);
+                    if (typeof playSuccess === 'function') playSuccess();
+                    close();
+                    renderAlbumBar();
+                    refreshPhotos();
+                }
+            });
+        }
+
+        function showMovePhotoModal(photo) {
+            var albums = getAlbums();
+            var html = '<p style="margin-bottom:12px;color:var(--text-light);">选择目标相册：</p>';
+            html += '<button class="album-tag" style="margin:4px;" onclick="movePhoto(' + photo.id + ', null);closeModal()">📁 默认（无相册）</button>';
+            albums.forEach(function(a) {
+                html += '<button class="album-tag" style="margin:4px;" onclick="movePhoto(' + photo.id + ', \'' + a.id + '\');closeModal()">📁 ' + escapeHTML(a.name) + '</button>';
+            });
+            showModal({
+                title: '移动「' + escapeHTML(photo.title) + '」到',
+                bodyHTML: html,
+                showSave: false,
+                showCancel: true
+            });
+        }
+
+        function movePhoto(photoId, newAlbumId) {
+            for (var i = 0; i < APP_DATA.photos.length; i++) {
+                if (APP_DATA.photos[i].id === photoId) {
+                    APP_DATA.photos[i].albumId = newAlbumId || undefined;
+                    break;
+                }
+            }
+            saveData(APP_DATA);
+            refreshPhotos();
+        }
+
+        /* ===== 照片/视频刷新 ===== */
         function refreshPhotos() {
-            currentPhotos = APP_DATA.photos || [];
+            var allPhotos = APP_DATA.photos || [];
+            // album filtering
+            if (currentAlbumId === 'all') {
+                currentPhotos = allPhotos;
+            } else {
+                currentPhotos = allPhotos.filter(function(p) { return p.albumId === currentAlbumId; });
+            }
+
+            // tags
             allTags = [];
             var tagSet = {};
             currentPhotos.forEach(function(p) {
                 (p.tags || []).forEach(function(t) { tagSet[t] = true; });
             });
             allTags = Object.keys(tagSet);
+
+            renderAlbumBar();
             renderFilterBar();
             renderPhotoGrid(currentPhotos);
         }
@@ -70,14 +182,16 @@
         function renderFilterBar() {
             var bar = document.getElementById('filterBar');
             bar.innerHTML = '<button class="filter-tag active" data-tag="all">全部</button>' +
-                allTags.map(function(tag) { return '<button class="filter-tag" data-tag="' + escapeHTML(tag) + '">' + escapeHTML(tag) + '</button>'; }).join('');
+                allTags.map(function(tag) {
+                    return '<button class="filter-tag" data-tag="' + escapeHTML(tag) + '">' + escapeHTML(tag) + '</button>';
+                }).join('');
             bar.querySelectorAll('.filter-tag').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     bar.querySelectorAll('.filter-tag').forEach(function(b) { b.classList.remove('active'); });
                     btn.classList.add('active');
-                    var tag = btn.dataset.tag;
-                    if (tag === 'all') renderPhotoGrid(currentPhotos);
-                    else renderPhotoGrid(currentPhotos.filter(function(p) { return (p.tags || []).indexOf(tag) > -1; }));
+                    currentTag = btn.dataset.tag;
+                    if (currentTag === 'all') renderPhotoGrid(currentPhotos);
+                    else renderPhotoGrid(currentPhotos.filter(function(p) { return (p.tags || []).indexOf(currentTag) > -1; }));
                 });
             });
         }
@@ -88,66 +202,213 @@
             photos.forEach(function(photo) {
                 var card = document.createElement('div');
                 card.className = 'photo-card';
-                var imgHTML = photo.image
-                    ? '<img src="' + photo.image + '" alt="' + escapeHTML(photo.title) + '" loading="lazy" onclick="openLightbox(\'' + (photo.image ? photo.image.replace(/'/g,"\\'") : '') + '\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\')">'
-                    : '<div class="photo-emoji" onclick="openLightbox(\'\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\')">' + (photo.emoji || '📷') + '</div>';
-                card.innerHTML = imgHTML +
-                    '<div class="photo-info">' +
-                    '<div class="photo-title">' + escapeHTML(photo.title) + '</div>' +
-                    '<div class="photo-date">' + formatDate(photo.date) + '</div>' +
-                    '<div class="photo-tags">' + (photo.tags || []).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
-                    '</div>';
-                card.appendChild(createCardActions(
-                    function() { showEditPhotoModal(photo); },
-                    function() {
-                        showConfirm('确定要删除这张照片吗？', function() {
-                            APP_DATA.photos = APP_DATA.photos.filter(function(p) { return p.id !== photo.id; });
-                            saveData(APP_DATA);
-                            refreshPhotos();
-                        });
-                    }
-                ));
+                card.style.position = 'relative';
+
+                var isVideo = photo.type === 'video' && photo.video;
+
+                if (isVideo) {
+                    card.innerHTML =
+                        '<div style="position:relative;">' +
+                        '<video src="' + photo.video + '" muted preload="metadata" style="width:100%;height:180px;object-fit:cover;border-radius:8px;background:#000;" onclick="openLightbox(null,\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\',\'' + (photo.video||'').replace(/'/g,"\\'") + '\',true)"></video>' +
+                        '<span class="video-badge">▶ 视频</span>' +
+                        '</div>' +
+                        '<div class="photo-info">' +
+                        '<div class="photo-title">' + escapeHTML(photo.title) + '</div>' +
+                        '<div class="photo-date">' + formatDate(photo.date) + '</div>' +
+                        '<div class="photo-tags">' + (photo.tags || []).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
+                        '</div>';
+                } else {
+                    var imgHTML = photo.image
+                        ? '<img src="' + photo.image + '" alt="' + escapeHTML(photo.title) + '" loading="lazy" onclick="openLightbox(\'' + (photo.image ? photo.image.replace(/'/g,"\\'") : '') + '\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\',null,false)">'
+                        : '<div class="photo-emoji" onclick="openLightbox(\'\',\'' + escapeHTML(photo.title).replace(/'/g,"\\'") + '\',\'' + (photo.date||'') + '\',\'' + (photo.tags||[]).join(' ') + '\',null,false)">' + (photo.emoji || '📷') + '</div>';
+                    card.innerHTML = imgHTML +
+                        '<div class="photo-info">' +
+                        '<div class="photo-title">' + escapeHTML(photo.title) + '</div>' +
+                        '<div class="photo-date">' + formatDate(photo.date) + '</div>' +
+                        '<div class="photo-tags">' + (photo.tags || []).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
+                        '</div>';
+                }
+
+                // Actions: edit, move, delete
+                var actionsDiv = document.createElement('div');
+                actionsDiv.className = 'card-actions';
+
+                var editBtn = document.createElement('button');
+                editBtn.className = 'action-btn action-edit';
+                editBtn.innerHTML = '✎';
+                editBtn.title = '编辑';
+                editBtn.addEventListener('click', function(e) { e.stopPropagation(); if (typeof playClick === 'function') playClick(); showEditPhotoModal(photo); });
+
+                var moveBtn = document.createElement('button');
+                moveBtn.className = 'action-btn action-edit';
+                moveBtn.innerHTML = '↗';
+                moveBtn.title = '移动';
+                moveBtn.style.cssText = 'background:var(--accent-light);';
+                moveBtn.addEventListener('click', function(e) { e.stopPropagation(); showMovePhotoModal(photo); });
+
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn action-delete';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = '删除';
+                deleteBtn.addEventListener('click', function(e) { e.stopPropagation();
+                    showConfirm('确定要删除「' + escapeHTML(photo.title) + '」吗？', function() {
+                        APP_DATA.photos = APP_DATA.photos.filter(function(p) { return p.id !== photo.id; });
+                        saveData(APP_DATA);
+                        if (typeof playDelete === 'function') playDelete();
+                        refreshPhotos();
+                    });
+                });
+
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(moveBtn);
+                actionsDiv.appendChild(deleteBtn);
+                card.appendChild(actionsDiv);
                 grid.appendChild(card);
             });
         }
 
+        /* ===== 上传照片/视频 ===== */
         function showAddPhotoModal() {
-            var selectedImage = '';
+            var selectedFileBase64 = '';
+            var selectedFileType = 'image'; // 'image' or 'video'
+            var selectedVideoDuration = 0;
+
             showModal({
-                title: '添加照片',
+                wide: true,
+                title: '添加照片或视频',
                 bodyHTML:
-                    '<div class="form-group"><label class="form-label">选择图片</label>' + createImageUploadHTML('photoInput', 'photoPreview', '') + '</div>' +
-                    '<div class="form-group"><label class="form-label">标题</label><input type="text" id="photoTitle" class="form-input" placeholder="照片描述"></div>' +
+                    '<div class="form-group"><label class="form-label">选择文件（图片或视频 ≤30MB）</label>' +
+                    '<div class="image-upload"><div class="upload-area" id="mediaInput_area">' +
+                    '<input type="file" accept="image/*,video/*" id="mediaInput" style="display:none;">' +
+                    '<div style="font-size:2rem;margin-bottom:6px;">📷</div>' +
+                    '<div>点击上传图片或视频（视频≤60秒,≤30MB）</div>' +
+                    '</div></div>' +
+                    '<div id="mediaPreview" style="margin-top:12px;text-align:center;"></div>' +
+                    '</div>' +
+                    '<div class="form-group"><label class="form-label">标题</label><input type="text" id="photoTitle" class="form-input" placeholder="照片/视频描述"></div>' +
                     '<div class="form-group"><label class="form-label">日期</label><input type="date" id="photoDate" class="form-input" value="' + getTodayDateStr() + '"></div>' +
-                    '<div class="form-group"><label class="form-label">标签（用逗号分隔）</label><input type="text" id="photoTags" class="form-input" placeholder="旅行, 日常, 风景"></div>',
+                    '<div class="form-group"><label class="form-label">标签（用逗号分隔）</label><input type="text" id="photoTags" class="form-input" placeholder="旅行, 日常"></div>' +
+                    '<div class="form-group"><label class="form-label">所属相册</label><select id="photoAlbum" class="form-input" style="appearance:auto;-webkit-appearance:auto;"><option value="">默认（无相册）</option>' +
+                    getAlbums().map(function(a) { return '<option value="' + a.id + '">' + escapeHTML(a.name) + '</option>'; }).join('') +
+                    '</select></div>',
                 onSave: function(close) {
                     var title = document.getElementById('photoTitle').value.trim();
                     var date = document.getElementById('photoDate').value;
                     var tagsStr = document.getElementById('photoTags').value.trim();
-                    if (!selectedImage || !title || !date) { alert('请上传图片并填写标题和日期'); return; }
+                    var albumId = document.getElementById('photoAlbum').value || undefined;
+                    if (!selectedFileBase64 || !title || !date) { alert('请上传文件并填写标题和日期'); return; }
                     var tags = tagsStr ? tagsStr.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }) : [];
-                    APP_DATA.photos.push({ id: generateId(APP_DATA.photos), image: selectedImage, title: title, date: date, tags: tags });
+
+                    var entry = {
+                        id: generateId(APP_DATA.photos),
+                        title: title,
+                        date: date,
+                        tags: tags,
+                        type: selectedFileType,
+                        albumId: albumId
+                    };
+
+                    if (selectedFileType === 'video') {
+                        entry.video = selectedFileBase64;
+                    } else {
+                        entry.image = selectedFileBase64;
+                    }
+
+                    APP_DATA.photos.push(entry);
                     saveData(APP_DATA);
+                    if (typeof playSuccess === 'function') playSuccess();
                     refreshPhotos();
                     close();
                 }
             });
-            bindImageUpload('photoInput', 'photoPreview', function(base64) { selectedImage = base64; });
+
+            var input = document.getElementById('mediaInput');
+            var area = document.getElementById('mediaInput_area');
+            var preview = document.getElementById('mediaPreview');
+
+            area.addEventListener('click', function() { input.click(); });
+
+            input.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+
+                // Check video constraints
+                if (file.type.startsWith('video/') && file.size > 30 * 1024 * 1024) {
+                    alert('视频文件不能超过 30MB'); return;
+                }
+
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var base64 = e.target.result;
+
+                    if (file.type.startsWith('video/')) {
+                        // Check duration
+                        var tempVideo = document.createElement('video');
+                        tempVideo.preload = 'metadata';
+                        tempVideo.src = base64;
+                        tempVideo.onloadedmetadata = function() {
+                            if (tempVideo.duration > 60) {
+                                alert('视频时长不能超过 60 秒，当前：' + Math.round(tempVideo.duration) + ' 秒');
+                                URL.revokeObjectURL(tempVideo.src);
+                                return;
+                            }
+                            selectedFileBase64 = base64;
+                            selectedFileType = 'video';
+                            selectedVideoDuration = Math.round(tempVideo.duration);
+                            preview.innerHTML =
+                                '<video src="' + base64 + '" controls style="max-width:100%;max-height:200px;border-radius:8px;"></video>' +
+                                '<div style="font-size:0.78rem;color:var(--text-lighter);margin-top:4px;">视频 · ' + selectedVideoDuration + '秒 · ' + (file.size/1024/1024).toFixed(1) + 'MB</div>';
+                        };
+                    } else {
+                        selectedFileBase64 = base64;
+                        selectedFileType = 'image';
+                        preview.innerHTML = '<img src="' + base64 + '" style="max-width:200px;max-height:120px;border-radius:8px;border:2px solid var(--accent-light);">';
+                    }
+                };
+
+                if (file.type.startsWith('video/')) {
+                    reader.readAsDataURL(file);
+                } else {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('图片大小不能超过5MB'); return;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
         }
 
         function showEditPhotoModal(photo) {
-            var selectedImage = photo.image || '';
+            var selectedFileBase64 = photo.type === 'video' ? photo.video : (photo.image || '');
+            var selectedFileType = photo.type || 'image';
+
             showModal({
-                title: '编辑照片',
+                wide: true,
+                title: '编辑',
                 bodyHTML:
-                    '<div class="form-group"><label class="form-label">更换照片（可选）</label>' + createImageUploadHTML('photoInputEdit', 'photoPreviewEdit', photo.image || '') + '</div>' +
+                    '<div class="form-group"><label class="form-label">更换文件（可选）</label>' +
+                    '<div class="image-upload"><div class="upload-area" id="mediaInputEdit_area">' +
+                    '<input type="file" accept="image/*,video/*" id="mediaInputEdit" style="display:none;">' +
+                    '<div style="font-size:2rem;margin-bottom:6px;">📷</div>' +
+                    '<div>点击更换（图片≤5MB, 视频≤30MB/60s）</div></div></div>' +
+                    '<div id="mediaPreviewEdit" style="margin-top:12px;text-align:center;">' +
+                    (selectedFileType === 'video'
+                        ? '<video src="' + selectedFileBase64 + '" controls style="max-width:100%;max-height:200px;border-radius:8px;"></video>'
+                        : (photo.image ? '<img src="' + photo.image + '" style="max-width:200px;max-height:120px;border-radius:8px;border:2px solid var(--accent-light);">' : '')) +
+                    '</div>' +
+                    '</div>' +
                     '<div class="form-group"><label class="form-label">标题</label><input type="text" id="photoTitleEdit" class="form-input" value="' + escapeHTML(photo.title) + '"></div>' +
                     '<div class="form-group"><label class="form-label">日期</label><input type="date" id="photoDateEdit" class="form-input" value="' + (photo.date || '') + '"></div>' +
-                    '<div class="form-group"><label class="form-label">标签（用逗号分隔）</label><input type="text" id="photoTagsEdit" class="form-input" value="' + escapeHTML((photo.tags || []).join(', ')) + '"></div>',
+                    '<div class="form-group"><label class="form-label">标签（逗号分隔）</label><input type="text" id="photoTagsEdit" class="form-input" value="' + escapeHTML((photo.tags || []).join(', ')) + '"></div>' +
+                    '<div class="form-group"><label class="form-label">所属相册</label><select id="photoAlbumEdit" class="form-input" style="appearance:auto;-webkit-appearance:auto;"><option value="">默认（无相册）</option>' +
+                    getAlbums().map(function(a) {
+                        return '<option value="' + a.id + '"' + (photo.albumId === a.id ? ' selected' : '') + '>' + escapeHTML(a.name) + '</option>';
+                    }).join('') +
+                    '</select></div>',
                 onSave: function(close) {
                     var title = document.getElementById('photoTitleEdit').value.trim();
                     var date = document.getElementById('photoDateEdit').value;
                     var tagsStr = document.getElementById('photoTagsEdit').value.trim();
+                    var albumId = document.getElementById('photoAlbumEdit').value || undefined;
                     if (!title || !date) { alert('请填写标题和日期'); return; }
                     var tags = tagsStr ? tagsStr.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }) : [];
                     var idx = -1;
@@ -155,49 +416,97 @@
                         if (APP_DATA.photos[i].id === photo.id) { idx = i; break; }
                     }
                     if (idx > -1) {
-                        APP_DATA.photos[idx].image = selectedImage;
                         APP_DATA.photos[idx].title = title;
                         APP_DATA.photos[idx].date = date;
                         APP_DATA.photos[idx].tags = tags;
+                        APP_DATA.photos[idx].albumId = albumId;
+                        APP_DATA.photos[idx].type = selectedFileType;
+                        if (selectedFileType === 'video') {
+                            APP_DATA.photos[idx].video = selectedFileBase64;
+                        } else {
+                            APP_DATA.photos[idx].image = selectedFileBase64;
+                        }
                         saveData(APP_DATA);
                         refreshPhotos();
                     }
                     close();
                 }
             });
-            bindImageUpload('photoInputEdit', 'photoPreviewEdit', function(base64) { selectedImage = base64; });
+
+            var input = document.getElementById('mediaInputEdit');
+            var area = document.getElementById('mediaInputEdit_area');
+            var preview = document.getElementById('mediaPreviewEdit');
+            area.addEventListener('click', function() { input.click(); });
+            input.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                if (file.type.startsWith('video/') && file.size > 30*1024*1024) { alert('视频不能超过30MB'); return; }
+                if (!file.type.startsWith('video/') && file.size > 5*1024*1024) { alert('图片不能超过5MB'); return; }
+                var reader = new FileReader();
+                reader.onload = function(e2) {
+                    selectedFileBase64 = e2.target.result;
+                    selectedFileType = file.type.startsWith('video/') ? 'video' : 'image';
+                    if (selectedFileType === 'video') {
+                        preview.innerHTML = '<video src="' + selectedFileBase64 + '" controls style="max-width:100%;max-height:200px;border-radius:8px;"></video>';
+                    } else {
+                        preview.innerHTML = '<img src="' + selectedFileBase64 + '" style="max-width:200px;max-height:120px;border-radius:8px;border:2px solid var(--accent-light);">';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
         }
 
-        function openLightbox(image, title, date, tags) {
+        /* ===== Lightbox ===== */
+        function openLightbox(image, title, date, tags, videoSrc, isVideo) {
             var content = document.getElementById('lightboxContent');
-            if (image) {
-                content.innerHTML = '<img src="' + image + '" alt="' + escapeHTML(title) + '">' +
+            if (isVideo && videoSrc) {
+                content.innerHTML =
+                    '<video src="' + videoSrc + '" controls class="lightbox-video" style="max-width:90vw;max-height:80vh;border-radius:8px;"></video>' +
                     '<div class="lightbox-info">' +
                     '<div class="lightbox-title">' + escapeHTML(title) + '</div>' +
                     '<div class="lightbox-date">' + formatDate(date) + '</div>' +
-                    '<div class="lightbox-tags">' + tags.split(' ').filter(function(t) { return t; }).map(function(t) { return '<span class="tag">' + escapeHTML(t) + '</span>'; }).join('') + '</div>' +
+                    '<div class="lightbox-tags">' + (tags||'').split(' ').filter(function(t){return t;}).map(function(t){return '<span class="tag">'+escapeHTML(t)+'</span>';}).join('') + '</div>' +
+                    '</div>';
+            } else if (image) {
+                content.innerHTML =
+                    '<img src="' + image + '" alt="' + escapeHTML(title) + '">' +
+                    '<div class="lightbox-info">' +
+                    '<div class="lightbox-title">' + escapeHTML(title) + '</div>' +
+                    '<div class="lightbox-date">' + formatDate(date) + '</div>' +
+                    '<div class="lightbox-tags">' + (tags||'').split(' ').filter(function(t){return t;}).map(function(t){return '<span class="tag">'+escapeHTML(t)+'</span>';}).join('') + '</div>' +
                     '</div>';
             } else {
                 var emoji = '📷';
                 for (var i = 0; i < APP_DATA.photos.length; i++) {
                     if (APP_DATA.photos[i].title === title) { emoji = APP_DATA.photos[i].emoji || '📷'; break; }
                 }
-                content.innerHTML = '<div style="font-size:8rem;text-align:center;padding:40px;">' + emoji + '</div>' +
-                    '<div class="lightbox-info">' +
-                    '<div class="lightbox-title">' + escapeHTML(title) + '</div>' +
-                    '<div class="lightbox-date">' + formatDate(date) + '</div>' +
-                    '</div>';
+                content.innerHTML =
+                    '<div style="font-size:8rem;text-align:center;padding:40px;">'+emoji+'</div>' +
+                    '<div class="lightbox-info"><div class="lightbox-title">'+escapeHTML(title)+'</div><div class="lightbox-date">'+formatDate(date)+'</div></div>';
             }
             document.getElementById('lightbox').classList.add('active');
         }
 
         function closeLightbox() {
-            document.getElementById('lightbox').classList.remove('active');
+            var lb = document.getElementById('lightbox');
+            lb.classList.remove('active');
+            // Stop video if playing
+            var v = lb.querySelector('video');
+            if (v) v.pause();
         }
 
         document.getElementById('lightbox').addEventListener('click', function(e) {
             if (e.target === this) closeLightbox();
         });
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
