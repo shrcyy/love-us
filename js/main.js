@@ -5,6 +5,106 @@ function escapeHTML(str) {
     });
 }
 
+/* ===== 个性化偏好: 主题 / 字体 / 壁纸 / 音效 ===== */
+(function() {
+    'use strict';
+
+    var PREFS_KEY = 'loveus_prefs_' + (window.getSpaceHash ? window.getSpaceHash() : 'default');
+
+    var DEFAULTS = {
+        theme: 'pink',
+        fontSize: 'medium',
+        wallpaper: 'gradient-warm',
+        soundEnabled: true
+    };
+
+    var WALLPAPERS = {
+        'gradient-warm': 'linear-gradient(135deg, #FF9A9E 0%, #FAD0C4 100%)',
+        'gradient-sky': 'linear-gradient(135deg, #A1C4FD 0%, #C2E9FB 100%)',
+        'gradient-mint': 'linear-gradient(135deg, #A8E6CF 0%, #DCEDC1 100%)'
+    };
+
+    function loadPrefs() {
+        try {
+            var raw = localStorage.getItem(PREFS_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    }
+
+    function savePrefs(prefs) {
+        try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch(e) {}
+    }
+
+    window.getPref = function(key) {
+        var p = loadPrefs();
+        return p[key] !== undefined ? p[key] : DEFAULTS[key];
+    };
+
+    window.setPref = function(key, value) {
+        var p = loadPrefs();
+        p[key] = value;
+        savePrefs(p);
+    };
+
+    window.getWallpaperValue = function(key) {
+        if (key && key.startsWith('custom:')) {
+            return key.substring(7); // return the base64/dataURI after 'custom:'
+        }
+        return WALLPAPERS[key] || WALLPAPERS['gradient-warm'];
+    };
+
+    window.listWallpapers = function() {
+        return Object.keys(WALLPAPERS);
+    };
+
+    window.getAllPrefs = function() {
+        var p = loadPrefs();
+        var all = {};
+        Object.keys(DEFAULTS).forEach(function(k) {
+            all[k] = p[k] !== undefined ? p[k] : DEFAULTS[k];
+        });
+        return all;
+    };
+
+    // Auto-apply on script load
+    function applyPreferences() {
+        var prefs = getAllPrefs();
+
+        // Theme
+        document.documentElement.setAttribute('data-theme', prefs.theme);
+
+        // Font size
+        var sizes = { small: '14px', medium: '16px', large: '18px' };
+        document.documentElement.style.fontSize = sizes[prefs.fontSize] || '16px';
+
+        // Wallpaper
+        var wp = prefs.wallpaper;
+        var bgValue = window.getWallpaperValue(wp);
+        if (wp && wp.startsWith('custom:')) {
+            // custom image (dataURI or URL)
+            document.body.style.backgroundImage = 'url(' + bgValue + ')';
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.backgroundRepeat = 'no-repeat';
+        } else {
+            document.body.style.background = bgValue;
+            document.body.style.backgroundAttachment = 'fixed';
+        }
+    }
+
+    // Apply immediately (before DOM ready, so no FOUC)
+    if (document.readyState === 'loading') {
+        // Apply as early as possible
+        applyPreferences();
+    } else {
+        applyPreferences();
+    }
+
+    // Expose re-apply for about page settings changes
+    window.reapplyPreferences = applyPreferences;
+})();
+
 function initSpaceUI() {
     var spaceName = getSpaceName();
     var navSpace = document.getElementById('nav-space-name');
