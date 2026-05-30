@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <nav class="navbar">
         <div class="nav-inner">
             <a href="index.html" class="nav-logo">💕 Y & C</a>
@@ -49,10 +59,14 @@
     </div>
 
     <footer class="footer">
-        <p>Made with <span class="heart">♥</span> by Y & C · 属于两个人的秘密花园</p>
+        <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -72,19 +86,87 @@
             const grid = document.getElementById('messagesGrid');
             grid.innerHTML = '';
             messages.forEach(m => {
-                const card = document.createElement('div');
+                var replies = m.replies || [];
+                var replyCount = replies.length;
+                var card = document.createElement('div');
                 card.className = 'message-card';
-                card.innerHTML = `
-                    <div class="msg-mood">${m.mood}</div>
-                    <div class="msg-sender">${m.sender}</div>
-                    <div class="msg-content">${m.content}</div>
-                    <div class="msg-time">${m.time}</div>`;
+                card.innerHTML =
+                    '<div class="msg-mood">' + m.mood + '</div>' +
+                    '<div class="msg-sender">' + m.sender + '</div>' +
+                    '<div class="msg-content">' + m.content + '</div>' +
+                    '<div class="msg-time">' + m.time + (replyCount > 0 ? ' · ' + replyCount + ' 条回复' : '') + '</div>' +
+                    '<button class="btn-reply-toggle" data-msgid="' + m.id + '">💬 回复</button>' +
+                    '<div class="reply-section" id="replySection-' + m.id + '" style="display:none;">' +
+                    renderReplies(m) +
+                    '<div class="reply-input-row">' +
+                    '<input type="text" class="reply-input" id="replyInput-' + m.id + '" placeholder="写下回复..." maxlength="300">' +
+                    '<button class="btn btn-sm btn-primary" onclick="submitReply(' + m.id + ')">发送</button>' +
+                    '</div>' +
+                    '</div>';
+
+                card.querySelector('.btn-reply-toggle').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var section = document.getElementById('replySection-' + m.id);
+                    var isVisible = section.style.display !== 'none';
+                    section.style.display = isVisible ? 'none' : 'block';
+                    this.textContent = isVisible ? '💬 回复' : '▲ 收起';
+                    if (!isVisible) {
+                        document.getElementById('replyInput-' + m.id).focus();
+                    }
+                });
+
                 card.appendChild(createCardActions(
                     null,
-                    () => showConfirm('确定要删除这条留言吗？', () => deleteMessage(m.id))
+                    function() {
+                        showConfirm('确定要删除这条留言吗？', function() { deleteMessage(m.id); });
+                    }
                 ));
                 grid.appendChild(card);
             });
+        }
+
+        function renderReplies(msg) {
+            var replies = msg.replies || [];
+            if (replies.length === 0) return '<div class="reply-list" style="display:none;"></div>';
+            return '<div class="reply-list">' +
+                replies.map(function(r) {
+                    return '<div class="reply-item"><span class="reply-sender">' + r.sender + '</span><span class="reply-text">' + r.content + '</span><span class="reply-time">' + r.time + '</span></div>';
+                }).join('') +
+                '</div>';
+        }
+
+        function submitReply(msgId) {
+            var input = document.getElementById('replyInput-' + msgId);
+            var content = input.value.trim();
+            if (!content) return;
+
+            var msgIdx = -1;
+            for (var i = 0; i < APP_DATA.messages.length; i++) {
+                if (APP_DATA.messages[i].id === msgId) { msgIdx = i; break; }
+            }
+            if (msgIdx === -1) return;
+
+            if (!APP_DATA.messages[msgIdx].replies) APP_DATA.messages[msgIdx].replies = [];
+
+            var now = new Date();
+            var timeStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+            APP_DATA.messages[msgIdx].replies.push({
+                id: Date.now(),
+                sender: APP_DATA.person1 ? APP_DATA.person1.name : '我',
+                content: content,
+                time: timeStr
+            });
+            saveData(APP_DATA);
+            input.value = '';
+            loadMessages();
+            // Re-open the reply section
+            setTimeout(function() {
+                var section = document.getElementById('replySection-' + msgId);
+                var toggle = document.querySelector('.btn-reply-toggle[data-msgid="' + msgId + '"]');
+                if (section) section.style.display = 'block';
+                if (toggle) toggle.textContent = '▲ 收起';
+            }, 100);
         }
 
         function submitMessage() {
@@ -94,18 +176,20 @@
             if (!sender || !content) { alert('请填写名字和留言内容哦~'); return; }
             const now = new Date();
             const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            APP_DATA.messages.push({ id: generateId(APP_DATA.messages), sender, mood, content, time: timeStr });
+            APP_DATA.messages.push({ id: generateId(APP_DATA.messages), sender, mood, content, time: timeStr, replies: [] });
             saveData(APP_DATA);
             document.getElementById('msgSender').value = '';
             document.getElementById('msgMood').value = '';
             document.getElementById('msgContent').value = '';
             loadMessages();
+            if (typeof playSuccess === 'function') playSuccess();
         }
 
         function deleteMessage(id) {
             APP_DATA.messages = APP_DATA.messages.filter(m => m.id !== id);
             saveData(APP_DATA);
             loadMessages();
+            if (typeof playDelete === 'function') playDelete();
         }
 
         function showRandomMessage() {
@@ -125,5 +209,14 @@
             if (e.target === this) this.classList.remove('active');
         });
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
