@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -60,6 +60,16 @@
     </style>
 </head>
 <body class="welcome-page no-petals">
+<div id="page-loader">
+    <div class="loader-logo">💕</div>
+    <div class="loader-text">正在加载你们的回忆...</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
+</div>
+
     <div class="petal-container">
         <div class="petal"></div><div class="petal"></div><div class="petal"></div>
         <div class="petal"></div><div class="petal"></div><div class="petal"></div>
@@ -115,7 +125,10 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/main.js"></script>
     <script>
         // Visited spaces tracking
@@ -326,5 +339,14 @@
             document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
         });
     </script>
+
+<script>
+(function() {
+    function hideLoader() { var el = document.getElementById('page-loader'); if (el) el.classList.add('hide'); }
+    window.addEventListener('load', function() { setTimeout(hideLoader, 600); });
+    setTimeout(hideLoader, 5000);
+})();
+</script>
+
 </body>
 </html>
