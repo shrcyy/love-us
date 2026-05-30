@@ -135,66 +135,65 @@ function saveData(data) {
             alert('存储空间不足，请清理浏览器缓存或导出数据后重试。');
         }
     }
-    // 2. 异步写云端（不阻塞 UI，失败只提示不中断）
+    // 2. 异步写 GitHub 云端（加密存储，不阻塞 UI，失败只提示不中断）
     if (typeof cloudSave === 'function') {
         cloudSave('main', data).then(function(ok) {
-            if (!ok) { console.warn('[Sync] 云端保存失败，数据仅保存在本地'); }
+            if (!ok) { console.warn('[Sync] GitHub 云端保存失败，数据仅保存在本地'); }
         });
     }
 }
 
 /**
- * 初始化云端同步：页面加载时尝试从云端拉取数据
- * - 云端有数据且比本地新 → 更新 APP_DATA + localStorage
- * - 云端无数据或更旧 → 把本地数据推送到云端
- * - 云端请求失败 → 不影响本地使用
+ * 初始化云端同步：页面加载时尝试从 GitHub 云端拉取数据（优先云端）
+ * - 云端有数据 → 更新 APP_DATA + localStorage
+ * - 云端无数据 → 把本地数据推送到 GitHub
+ * - 云端请求失败 → 回退使用本地数据
  * 返回 Promise，调用方可监听同步完成事件。
  */
 function initCloudSync() {
     return new Promise(function(resolve) {
         if (typeof cloudLoad !== 'function') {
-            console.log('[Sync] 云端模块未加载，使用纯本地模式');
+            console.log('[Sync] GitHub 云端模块未加载，使用纯本地模式');
             resolve({ from: 'local', message: '云端模块未加载' });
             return;
         }
 
         cloudLoad('main').then(function(cloudData) {
             if (cloudData && typeof cloudData === 'object' && !Array.isArray(cloudData)) {
-                // 云端有数据 → 检查是否比本地新
-                var localData = loadDataFromLocal();
+                // 云端有数据 → 更新 APP_DATA 和 localStorage
                 var cloudHasContent = Object.keys(cloudData).some(function(k) {
                     return k !== 'startDate' || cloudData[k];
                 });
 
                 if (cloudHasContent) {
-                    // 用云端数据覆盖本地
                     window.APP_DATA = cloudData;
                     try {
                         localStorage.setItem(getStorageKey(), JSON.stringify(cloudData));
                     } catch(e) {}
-                    console.log('[Sync] 已从云端加载数据');
-                    resolve({ from: 'cloud', message: '已从云端同步' });
+                    console.log('[Sync] 已从 GitHub 云端加载数据');
+                    resolve({ from: 'cloud', message: '已从 GitHub 云端同步' });
                 } else {
                     // 云端数据为空，推送本地上去
+                    var localData = loadDataFromLocal();
                     if (localData) {
                         cloudSave('main', localData);
                     }
-                    resolve({ from: 'local', message: '云端数据为空，使用本地' });
+                    resolve({ from: 'local', message: 'GitHub 云端数据为空，使用本地' });
                 }
             } else {
                 // 云端无数据 → 把本地推上去
                 var ld = loadDataFromLocal();
                 cloudSave('main', ld).then(function(ok) {
                     if (ok) {
-                        resolve({ from: 'local', message: '已上传到云端' });
+                        resolve({ from: 'local', message: '已上传到 GitHub 云端' });
                     } else {
-                        resolve({ from: 'local', message: '云端上传失败' });
+                        resolve({ from: 'local', message: 'GitHub 云端上传失败' });
                     }
                 });
             }
         }).catch(function(err) {
-            console.warn('[Sync] 云端拉取失败，使用本地数据', err);
-            resolve({ from: 'local', message: '云端连接失败' });
+            console.warn('[Sync] GitHub 云端拉取失败，使用本地数据', err);
+            resolve({ from: 'local', message: 'GitHub 云端连接失败' });
         });
     });
 }
