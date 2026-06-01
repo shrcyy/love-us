@@ -381,16 +381,35 @@
 
         function initSyncUI() {
             updateSyncStatusUI('正在连接 GitHub 云端…', '');
-            // 初始化云端同步
-            if (typeof initCloudSync === 'function') {
-                initCloudSync().then(function(result) {
-                    var statusText = result.from === 'cloud'
-                        ? '已从云端同步数据'
-                        : '使用本地数据（' + result.message + '）';
-                    updateSyncStatusUI(statusText, '');
+
+            // 先检测 GitHub 连通性
+            if (typeof cloudIsReady === 'function') {
+                cloudIsReady().then(function(ready) {
+                    if (!ready) {
+                        updateSyncStatusUI('GitHub API 不可达，使用本地模式', '');
+                        return;
+                    }
+                    doCloudSync();
+                }).catch(function() {
+                    updateSyncStatusUI('GitHub API 不可达，使用本地模式', '');
                 });
             } else {
-                updateSyncStatusUI('云端模块未加载，仅使用本地存储', '');
+                doCloudSync();
+            }
+
+            function doCloudSync() {
+                if (typeof initCloudSync === 'function') {
+                    initCloudSync().then(function(result) {
+                        var statusText = result.from === 'cloud'
+                            ? '已从云端同步数据'
+                            : '使用本地数据（' + result.message + '）';
+                        updateSyncStatusUI(statusText, '');
+                    }).catch(function(err) {
+                        updateSyncStatusUI('同步失败：' + (err.message || '未知错误'), '');
+                    });
+                } else {
+                    updateSyncStatusUI('云端模块未加载，仅使用本地存储', '');
+                }
             }
         }
 
