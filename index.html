@@ -132,7 +132,7 @@
 
     <footer class="footer">
         <p>珍惜每一个当下，因为都是独一无二的。Made with <span class="heart">♥</span> by Y & C</p>
-        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 你的数据仅存储在浏览器和你的 LeanCloud 账号中 · 隐私安全</p>
+        <p style="font-size:0.75rem;color:var(--text-lighter);margin-top:6px;">v2.0 · 数据加密存储在 GitHub 云端 · 隐私安全</p>
     </footer>
 
     <script src="js/cloud.js"></script>
@@ -141,68 +141,99 @@
     <script src="js/main.js"></script>
     <script>
         function initHomePage() {
-            var data = APP_DATA;
-            document.getElementById('homeHero').style.display = 'block';
-
-            if (!data.startDate) {
-                document.getElementById('countdownCard').style.display = 'none';
-                document.getElementById('startDateGuide').style.display = 'block';
-            } else {
-                document.getElementById('startDateGuide').style.display = 'none';
-                var start = new Date(data.startDate);
-                var today = new Date();
-                var days = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                document.getElementById('togetherDays').textContent = days;
-
-                var anns = data.anniversaries || [];
-                var nearest = null, minDiff = Infinity;
-                anns.forEach(function(ann) {
-                    var t = new Date(ann.date);
-                    t.setFullYear(today.getFullYear());
-                    if (t < today) t.setFullYear(today.getFullYear() + 1);
-                    var diff = Math.ceil((t.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                    if (diff < minDiff) { minDiff = diff; nearest = ann; }
-                });
-                if (nearest) {
-                    document.getElementById('nextAnniversary').innerHTML =
-                        '下一个纪念日 <strong>' + nearest.icon + ' ' + nearest.name + '</strong> · 还有 <strong>' + minDiff + '</strong> 天';
+            try {
+                var data = (typeof APP_DATA === 'object' && APP_DATA !== null) ? APP_DATA : {};
+                if (!data || Object.keys(data).length === 0) {
+                    // 空数据：显示空间引导 + 友好提示
+                    document.getElementById('homeHero').style.display = 'block';
+                    document.getElementById('countdownCard').style.display = 'none';
+                    document.getElementById('startDateGuide').style.display = 'block';
+                    document.getElementById('recentDiaries').innerHTML =
+                        '<div class="card" style="text-align:center;color:var(--text-lighter);">✨ 开始记录你们的故事吧！去时间线写下第一篇日记~</div>';
+                    addFAB(function() { showStartDateModal(); });
+                    return;
                 }
-            }
 
-            var diaries = data.diaries || [];
-            var sorted = [].concat(diaries).sort(function(a,b) { return new Date(b.date) - new Date(a.date); });
-            var recent = sorted.slice(0, 3);
-            var container = document.getElementById('recentDiaries');
-            container.innerHTML = '';
-            if (recent.length === 0) {
-                container.innerHTML = '<div class="card" style="text-align:center;color:var(--text-lighter);">还没有日记，去时间线添加第一条吧~</div>';
-            }
-            recent.forEach(function(d) {
-                var excerpt = d.content && d.content.length > 80 ? d.content.substring(0, 80) + '...' : (d.content || '');
-                container.innerHTML +=
-                    '<div class="diary-preview" onclick="location.href=\'timeline.html\'">' +
-                    '<div class="mood">' + (d.mood || '📝') + '</div>' +
-                    '<div class="title">' + escapeHTML(d.title) + '</div>' +
-                    '<div class="date">' + formatDate(d.date) + '</div>' +
-                    '<div class="excerpt">' + escapeHTML(excerpt) + '</div>' +
-                    '</div>';
-            });
+                document.getElementById('homeHero').style.display = 'block';
 
-            addFAB(function() { showStartDateModal(); });
+                if (!data.startDate) {
+                    document.getElementById('countdownCard').style.display = 'block';
+                    document.getElementById('togetherDays').textContent = '--';
+                    document.getElementById('nextAnniversary').innerHTML = '设置我们的纪念日开始倒计时 ✨';
+                    document.getElementById('startDateGuide').style.display = 'block';
+                } else {
+                    document.getElementById('startDateGuide').style.display = 'none';
+                    var start = new Date(data.startDate);
+                    var today = new Date();
+                    var days = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                    document.getElementById('togetherDays').textContent = days;
+
+                    var anns = data.anniversaries || [];
+                    var nearest = null, minDiff = Infinity;
+                    anns.forEach(function(ann) {
+                        var t = new Date(ann.date);
+                        t.setFullYear(today.getFullYear());
+                        if (t < today) t.setFullYear(today.getFullYear() + 1);
+                        var diff = Math.ceil((t.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diff < minDiff) { minDiff = diff; nearest = ann; }
+                    });
+                    if (nearest) {
+                        document.getElementById('nextAnniversary').innerHTML =
+                            '下一个纪念日 <strong>' + nearest.icon + ' ' + nearest.name + '</strong> · 还有 <strong>' + minDiff + '</strong> 天';
+                    }
+                }
+
+                var diaries = data.diaries || [];
+                var sorted = [].concat(diaries).sort(function(a,b) { return new Date(b.date) - new Date(a.date); });
+                var recent = sorted.slice(0, 3);
+                var container = document.getElementById('recentDiaries');
+                container.innerHTML = '';
+                if (recent.length === 0) {
+                    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text-lighter);">还没有日记，去时间线添加第一条吧~</div>';
+                }
+                recent.forEach(function(d) {
+                    var excerpt = d.content && d.content.length > 80 ? d.content.substring(0, 80) + '...' : (d.content || '');
+                    container.innerHTML +=
+                        '<div class="diary-preview" onclick="location.href=\'timeline.html\'">' +
+                        '<div class="mood">' + (d.mood || '📝') + '</div>' +
+                        '<div class="title">' + escapeHTML(d.title) + '</div>' +
+                        '<div class="date">' + formatDate(d.date) + '</div>' +
+                        '<div class="excerpt">' + escapeHTML(excerpt) + '</div>' +
+                        '</div>';
+                });
+
+                addFAB(function() { showStartDateModal(); });
+            } catch(e) {
+                console.error('首页渲染失败:', e);
+                // 兜底：至少展示 hero 和 quick-nav（HTML 中已静态存在）
+                document.getElementById('homeHero').style.display = 'block';
+                document.getElementById('countdownCard').style.display = 'block';
+                document.getElementById('togetherDays').textContent = '--';
+                document.getElementById('nextAnniversary').innerHTML = '设置我们的纪念日开始倒计时 ✨';
+                document.getElementById('recentDiaries').innerHTML =
+                    '<div class="card" style="text-align:center;color:var(--text-lighter);">✨ 开始记录你们的故事吧！</div>';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            var rawHash = window.location.hash.substring(1);
-            if (!rawHash) {
-                window.location.href = 'welcome.html';
-                return;
+            try {
+                var rawHash = window.location.hash.substring(1);
+                if (!rawHash) {
+                    window.location.href = 'welcome.html';
+                    return;
+                }
+                document.getElementById('spaceGuide').style.display = 'none';
+                checkAccess(function() {
+                    initHomePage();
+                }, function() {
+                    showPasswordGate(initHomePage);
+                });
+            } catch(e) {
+                console.error('首页初始化失败:', e);
+                // 兜底：显示 hero 和引导
+                document.getElementById('homeHero').style.display = 'block';
+                document.getElementById('spaceGuide').style.display = 'block';
             }
-            document.getElementById('spaceGuide').style.display = 'none';
-            checkAccess(function() {
-                initHomePage();
-            }, function() {
-                showPasswordGate(initHomePage);
-            });
         });
 
         function showStartDateModal() {
