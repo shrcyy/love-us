@@ -94,11 +94,15 @@ function escapeHTML(str) {
     }
 
     // Apply immediately (before DOM ready, so no FOUC)
-    if (document.readyState === 'loading') {
-        // Apply as early as possible
-        applyPreferences();
-    } else {
-        applyPreferences();
+    // Bug1 fix: wrap in try-catch to prevent blocking all JS execution
+    try {
+        if (document.readyState === 'loading') {
+            applyPreferences();
+        } else {
+            applyPreferences();
+        }
+    } catch(e) {
+        console.error('applyPreferences failed (non-fatal):', e);
     }
 
     // Expose re-apply for about page settings changes
