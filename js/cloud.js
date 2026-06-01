@@ -259,11 +259,19 @@
   }
 
   /**
-   * cloudIsReady() → boolean
-   * 返回云端模块是否可用（无 SDK 依赖，始终返回 true）
+   * cloudIsReady() → Promise<boolean>
+   * 检查 GitHub raw URL 是否可达（公开仓库无需认证）
+   * 返回 Promise，resolve 为 true/false
    */
   function cloudIsReady() {
-    return true;
+    return new Promise(function (resolve) {
+      // 尝试访问 GitHub raw URL，检测网络连通性
+      fetch(RAW_BASE + '/data/.healthcheck', { method: 'HEAD' }).then(function (resp) {
+        resolve(resp.ok || resp.status === 404); // 404 也算可达（只是文件不存在）
+      }).catch(function () {
+        resolve(false);
+      });
+    });
   }
 
   /**
