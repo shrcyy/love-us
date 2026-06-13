@@ -34,8 +34,6 @@ summary{display:list-item}
 template{display:none}
 [hidden]{display:none}
 
-:none}
-
 :root{--primary:#FF8C94;--primary-light:#FFB3B8;--primary-dark:#E6737C;--secondary:#F9E4D4;--secondary-light:#FDF2E9;--accent:#C9B8A8;--accent-light:#D9CEC3;--bg:#FFF9F5;--bg-warm:#FFF3EF;--white:#FFFFFF;--text:#5D4E37;--text-light:#8B7D6B;--text-lighter:#B0A394;--shadow:rgba(139,125,107,0.12);--shadow-lg:rgba(139,125,107,0.18);--radius:18px;--radius-sm:10px;--radius-xs:6px;--font-title:'Georgia','STSong','SimSun',serif;--font-body:'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif;--max-width:1200px;--nav-height:68px}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth;font-size:16px}
