@@ -46,37 +46,61 @@
   }
 
   /**
-   * XOR 加密后 Base64 编码
+   * 将字节数组转为 Base64 字符串（兼容 btoa 无法处理非 Latin1 的问题）
    */
-  function _encrypt(plainText) {
-    var key = _getCryptoKey();
-    var bytes = [];
-    for (var i = 0; i < plainText.length; i++) {
-      bytes.push(plainText.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-    }
+  function _bytesToBase64(bytes) {
     var binary = '';
-    for (var j = 0; j < bytes.length; j++) {
-      binary += String.fromCharCode(bytes[j]);
+    for (var i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
   }
 
   /**
-   * Base64 解码后 XOR 解密
+   * 将 Base64 字符串解码为字节数组
+   */
+  function _base64ToBytes(b64) {
+    var binary = atob(b64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  /**
+   * XOR 加密后 Base64 编码（字节级加密，支持中文）
+   */
+  function _encrypt(plainText) {
+    var keyStr = _getCryptoKey();
+    var encoder = new TextEncoder();
+    var dataBytes = encoder.encode(plainText);
+    var keyBytes = encoder.encode(keyStr);
+    var encrypted = new Uint8Array(dataBytes.length);
+    for (var i = 0; i < dataBytes.length; i++) {
+      encrypted[i] = dataBytes[i] ^ keyBytes[i % keyBytes.length];
+    }
+    return _bytesToBase64(encrypted);
+  }
+
+  /**
+   * Base64 解码后 XOR 解密（字节级解密，支持中文）
    */
   function _decrypt(cipherB64) {
-    var key = _getCryptoKey();
-    var binary;
+    var keyStr = _getCryptoKey();
     try {
-      binary = atob(cipherB64);
+      var encryptedBytes = _base64ToBytes(cipherB64);
     } catch (e) {
       return null;
     }
-    var result = '';
-    for (var i = 0; i < binary.length; i++) {
-      result += String.fromCharCode(binary.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    var encoder = new TextEncoder();
+    var keyBytes = encoder.encode(keyStr);
+    var decrypted = new Uint8Array(encryptedBytes.length);
+    for (var i = 0; i < encryptedBytes.length; i++) {
+      decrypted[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
     }
-    return result;
+    var decoder = new TextDecoder();
+    return decoder.decode(decrypted);
   }
 
   /* ================================================================
