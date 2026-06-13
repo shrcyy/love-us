@@ -207,18 +207,20 @@
                             // Set space meta
                             if (spacePassword) {
                                 hashPasswordSHA256(spacePassword).then(function(hashPwd) {
-                                    setSpaceMetaFor(hash, spaceName, hashPwd);
                                     setDefaultData(hash, startDate);
                                     recordVisitedSpace(hash);
                                     close();
-                                    window.location.href = 'index.html#' + hash;
+                                    setSpaceMetaFor(hash, spaceName, hashPwd).then(function() {
+                                        window.location.href = 'index.html#' + hash;
+                                    });
                                 });
                             } else {
-                                setSpaceMetaFor(hash, spaceName);
                                 setDefaultData(hash, startDate);
                                 recordVisitedSpace(hash);
                                 close();
-                                window.location.href = 'index.html#' + hash;
+                                setSpaceMetaFor(hash, spaceName).then(function() {
+                                    window.location.href = 'index.html#' + hash;
+                                });
                             }
                         }
                     },
@@ -237,17 +239,20 @@
             if (passwordHash) meta.passwordHash = passwordHash;
             localStorage.setItem(metaKey, JSON.stringify(meta));
             // 推送到 GitHub 云端（明文存储，SHA256 不可逆，安全）
+            // 返回 Promise，让调用方可以等待
             if (typeof cloudSave === 'function') {
-                // 临时覆盖 getSpaceHash 以使用正确的 hash
                 var origGetSpaceHash = window.getSpaceHash;
                 window.getSpaceHash = function() { return hash; };
-                cloudSave('_meta', meta, true).then(function(ok) {
-                    if (!ok) console.warn('[Welcome] 云端同步空间元数据失败');
+                return cloudSave('_meta', meta, true).then(function(ok) {
                     window.getSpaceHash = origGetSpaceHash;
+                    if (!ok) console.warn('[Welcome] 云端同步空间元数据失败');
+                    return ok;
                 }).catch(function() {
                     window.getSpaceHash = origGetSpaceHash;
+                    return false;
                 });
             }
+            return Promise.resolve(false);
         }
 
         function setDefaultData(hash, startDate) {
