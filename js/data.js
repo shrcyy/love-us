@@ -40,7 +40,17 @@ var DEFAULT_DATA = {
 
 function getSpaceHash() {
     var hash = window.location.hash.substring(1);
-    return hash || 'default';
+    if (hash) {
+        // 缓存到 sessionStorage，子页面跳转丢失 hash 时回退
+        try { sessionStorage.setItem('loveus_space_hash', hash); } catch(e) {}
+        return hash;
+    }
+    // fallback: 从 sessionStorage 恢复
+    try {
+        var cached = sessionStorage.getItem('loveus_space_hash');
+        if (cached) return cached;
+    } catch(e) {}
+    return 'default';
 }
 
 function getStorageKey() {

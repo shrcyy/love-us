@@ -301,6 +301,26 @@ function initNav() {
             navLinks.classList.remove('active');
         }
     });
+    // 导航链接注入 space hash（防止子页面跳转丢失空间上下文）
+    injectNavHash();
+}
+
+/**
+ * 给所有 .nav-links 中的 <a> 链接拼接 space hash
+ * 确保从任意子页面导航时不会丢失空间上下文
+ */
+function injectNavHash() {
+    var hash = getSpaceHash();
+    if (!hash || hash === 'default') return;
+    var links = document.querySelectorAll('.nav-links a');
+    links.forEach(function(a) {
+        var href = a.getAttribute('href');
+        if (!href || href === '#' || href.startsWith('http')) return;
+        // 避免重复拼接
+        if (href.indexOf('#') === -1) {
+            a.href = href + '#' + hash;
+        }
+    });
 }
 
 function initScrollAnimations() {
