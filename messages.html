@@ -69,7 +69,9 @@
     <script src="js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            loadMessages();
+            onCloudReady(() => {
+                loadMessages();
+            });
             addFAB(() => {
                 document.getElementById('msgSender').focus();
                 document.querySelector('.message-form').scrollIntoView({ behavior: 'smooth' });

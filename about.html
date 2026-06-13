@@ -173,7 +173,9 @@
     <script src="js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            refreshAbout();
+            onCloudReady(function() {
+                refreshAbout();
+            });
             updateShareLink();
             addFAB(function() { showEditAboutModal(); });
             initSyncUI();

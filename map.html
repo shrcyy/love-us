@@ -147,8 +147,8 @@
     <script src="js/cloud.js"></script>
     <script src="js/data.js"></script>
     <script src="js/sound.js"></script>
-    <script src="js/main.js"></script>
     <script src="js/leaflet.min.js"></script>
+    <script src="js/main.js"></script>
     <script>
         var map;
         var markers = {};
@@ -157,8 +157,10 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                initMap();
-                refreshPlaces();
+                onCloudReady(function() {
+                    initMap();
+                    refreshPlaces();
+                });
                 addFAB(function() { startAddPlaceMode(); });
             } catch(e) {
                 console.error('地图初始化失败:', e);

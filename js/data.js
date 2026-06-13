@@ -58,6 +58,12 @@ function setSpaceMeta(name, passwordHash) {
     var meta = { name: name, created: new Date().toISOString() };
     if (passwordHash) meta.passwordHash = passwordHash;
     localStorage.setItem(key, JSON.stringify(meta));
+    // 推送到 GitHub 云端（明文存储，SHA256 不可逆，安全）
+    if (typeof cloudSave === 'function') {
+        cloudSave('_meta', meta, true).then(function(ok) {
+            if (!ok) console.warn('[Meta] 云端同步空间元数据失败');
+        });
+    }
 }
 
 function getSpaceMeta() {
@@ -67,6 +73,28 @@ function getSpaceMeta() {
         try { return JSON.parse(meta); } catch (e) { return null; }
     }
     return null;
+}
+
+/**
+ * getSpaceMetaAsync() → Promise<object|null>
+ * 先从 localStorage 取，取不到则从 GitHub 云端拉取并缓存到本地
+ */
+function getSpaceMetaAsync() {
+    return new Promise(function(resolve) {
+        var local = getSpaceMeta();
+        if (local) { resolve(local); return; }
+        // 本地没有 → 从云端拉取（不加密）
+        if (typeof cloudLoad !== 'function') { resolve(null); return; }
+        cloudLoad('_meta', true).then(function(cloudMeta) {
+            if (cloudMeta) {
+                var key = getStorageKey() + '_meta';
+                try { localStorage.setItem(key, JSON.stringify(cloudMeta)); } catch(e) {}
+            }
+            resolve(cloudMeta);
+        }).catch(function() {
+            resolve(null);
+        });
+    });
 }
 
 function isLoggedIn() {
@@ -256,3 +284,24 @@ function importDataJSON(jsonStr) {
 }
 
 var APP_DATA = loadData();
+window._cloudSynced = false;
+
+// 自动从云端同步数据（页面加载时）
+if (typeof initCloudSync === 'function') {
+    initCloudSync().then(function(result) {
+        window._cloudSynced = true;
+        if (result.from === 'cloud') {
+            console.log('[Sync] 已从 GitHub 云端加载数据');
+        }
+        // 触发自定义事件，通知页面数据已就绪
+        var event = new CustomEvent('cloudDataReady', { detail: result });
+        document.dispatchEvent(event);
+    }).catch(function() {
+        window._cloudSynced = true;
+        console.warn('[Sync] 云端同步跳过，使用本地数据');
+        var event = new CustomEvent('cloudDataReady', { detail: { from: 'local' } });
+        document.dispatchEvent(event);
+    });
+} else {
+    window._cloudSynced = true;
+}

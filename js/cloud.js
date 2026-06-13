@@ -105,16 +105,17 @@
    * ================================================================ */
 
   /**
-   * cloudSave(key, value) → Promise<boolean>
+   * cloudSave(key, value, skipEncrypt) → Promise<boolean>
    * 加密后通过 GitHub Contents API 上传到仓库
    * - 若文件已存在则更新（需要 sha），否则新建
+   * - skipEncrypt=true 时不加密直接存储（用于元数据等公开数据）
    * - 返回 true 表示保存成功，false 表示失败
    */
-  function cloudSave(key, value) {
+  function cloudSave(key, value, skipEncrypt) {
     return new Promise(function (resolve) {
       var filePath = _getFilePath(key);
       var dataValue = typeof value === 'string' ? value : JSON.stringify(value);
-      var encrypted = _encrypt(dataValue);
+      var encrypted = skipEncrypt ? btoa(unescape(encodeURIComponent(dataValue))) : _encrypt(dataValue);
 
       // 先 GET 检查文件是否存在，获取 sha（更新时需要）
       fetch(_apiUrl(filePath) + '?ref=' + GITHUB_BRANCH, {
@@ -161,11 +162,12 @@
   }
 
   /**
-   * cloudLoad(key) → Promise<object|null>
+   * cloudLoad(key, skipDecrypt) → Promise<object|null>
    * 从 GitHub raw URL 读取（公开仓库无需认证，速度快）
+   * - skipDecrypt=true 时不解密（用于元数据等公开数据）
    * - 返回解密解析后的 JSON 对象，不存在或失败则返回 null
    */
-  function cloudLoad(key) {
+  function cloudLoad(key, skipDecrypt) {
     return new Promise(function (resolve) {
       var filePath = _getFilePath(key);
       var url = _rawUrl(filePath) + '?t=' + Date.now(); // 缓存破坏
@@ -181,7 +183,19 @@
         return resp.text();
       }).then(function (text) {
         if (!text) { resolve(null); return; }
-        var decrypted = _decrypt(text.trim());
+        var decrypted;
+        if (skipDecrypt) {
+          // 非加密内容：Base64 解码
+          try {
+            decrypted = decodeURIComponent(escape(atob(text.trim())));
+          } catch (e) {
+            console.error('[Cloud] Base64 解码失败: ' + key, e);
+            resolve(null);
+            return;
+          }
+        } else {
+          decrypted = _decrypt(text.trim());
+        }
         if (!decrypted) {
           console.error('[Cloud] 解密失败: ' + key);
           resolve(null);

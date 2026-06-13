@@ -224,10 +224,39 @@
                     return;
                 }
                 document.getElementById('spaceGuide').style.display = 'none';
-                checkAccess(function() {
-                    initHomePage();
+
+                // 显示加载状态
+                var loader = document.getElementById('page-loader');
+                if (loader) { loader.style.display = 'flex'; }
+
+                // 1. 先从云端同步空间元数据（跨设备登录支持）
+                checkAccessWithCloud(function() {
+                    // 2. 验证通过，从云端同步数据
+                    if (typeof initCloudSync === 'function') {
+                        initCloudSync().then(function(result) {
+                            console.log('[Init] 云端同步完成:', result.from);
+                            initHomePage();
+                            if (loader) { loader.classList.add('hide'); }
+                        }).catch(function() {
+                            console.warn('[Init] 云端同步失败，使用本地数据');
+                            initHomePage();
+                            if (loader) { loader.classList.add('hide'); }
+                        });
+                    } else {
+                        initHomePage();
+                        if (loader) { loader.classList.add('hide'); }
+                    }
                 }, function() {
-                    showPasswordGate(initHomePage);
+                    // 需要密码
+                    if (loader) { loader.classList.add('hide'); }
+                    showPasswordGate(function() {
+                        if (typeof initCloudSync === 'function') {
+                            initCloudSync().then(function() { initHomePage(); })
+                                .catch(function() { initHomePage(); });
+                        } else {
+                            initHomePage();
+                        }
+                    });
                 });
             } catch(e) {
                 console.error('首页初始化失败:', e);

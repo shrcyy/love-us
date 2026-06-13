@@ -78,8 +78,10 @@
         let currentDiaries = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 初始化时间线
-            refreshDiaries();
+            // 初始化时间线（等云端数据就绪）
+            onCloudReady(() => {
+                refreshDiaries();
+            });
 
             // 年份筛选
             document.querySelectorAll('#yearFilter .filter-tag').forEach(btn => {

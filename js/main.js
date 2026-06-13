@@ -134,6 +134,22 @@ function checkAccess(onGranted, onDenied) {
     onDenied();
 }
 
+/**
+ * checkAccessWithCloud(onGranted, onDenied)
+ * 先从云端拉取空间元数据（解决跨设备问题），再执行 checkAccess
+ */
+function checkAccessWithCloud(onGranted, onDenied) {
+    if (typeof getSpaceMetaAsync !== 'function') {
+        checkAccess(onGranted, onDenied);
+        return;
+    }
+    getSpaceMetaAsync().then(function() {
+        checkAccess(onGranted, onDenied);
+    }).catch(function() {
+        checkAccess(onGranted, onDenied);
+    });
+}
+
 function showPasswordGate(onSuccess) {
     var container = document.getElementById('passwordGate');
     if (!container) {
@@ -423,3 +439,15 @@ document.addEventListener('DOMContentLoaded', function() {
     initPetals();
     initSpaceUI();
 });
+
+/**
+ * onCloudReady(callback)
+ * 云端数据就绪后执行回调。若已就绪则立即执行，否则监听 cloudDataReady 事件。
+ */
+function onCloudReady(callback) {
+    if (window._cloudSynced) {
+        callback();
+    } else {
+        document.addEventListener('cloudDataReady', callback, { once: true });
+    }
+}

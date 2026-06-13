@@ -57,9 +57,11 @@
         let currentAnniversaries = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            refreshAnniversaries();
+            onCloudReady(() => {
+                refreshAnniversaries();
+                checkAnniversaryNotifications();
+            });
             addFAB(() => showAddAnniversaryModal());
-            checkAnniversaryNotifications();
         });
 
         function refreshAnniversaries() {
