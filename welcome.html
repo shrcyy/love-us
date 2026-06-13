@@ -236,6 +236,18 @@
             var meta = { name: name, created: new Date().toISOString() };
             if (passwordHash) meta.passwordHash = passwordHash;
             localStorage.setItem(metaKey, JSON.stringify(meta));
+            // 推送到 GitHub 云端（明文存储，SHA256 不可逆，安全）
+            if (typeof cloudSave === 'function') {
+                // 临时覆盖 getSpaceHash 以使用正确的 hash
+                var origGetSpaceHash = window.getSpaceHash;
+                window.getSpaceHash = function() { return hash; };
+                cloudSave('_meta', meta, true).then(function(ok) {
+                    if (!ok) console.warn('[Welcome] 云端同步空间元数据失败');
+                    window.getSpaceHash = origGetSpaceHash;
+                }).catch(function() {
+                    window.getSpaceHash = origGetSpaceHash;
+                });
+            }
         }
 
         function setDefaultData(hash, startDate) {

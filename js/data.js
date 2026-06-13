@@ -287,21 +287,32 @@ var APP_DATA = loadData();
 window._cloudSynced = false;
 
 // 自动从云端同步数据（页面加载时）
-if (typeof initCloudSync === 'function') {
-    initCloudSync().then(function(result) {
-        window._cloudSynced = true;
-        if (result.from === 'cloud') {
-            console.log('[Sync] 已从 GitHub 云端加载数据');
+// 先加载空间元数据（含密码哈希），再同步主数据（需要正确密钥解密）
+function _autoCloudSync() {
+    // 1. 先从云端拉取空间元数据并缓存到 localStorage（确保 cloud.js 的 _getCryptoKey 能读到）
+    var metaPromise = (typeof getSpaceMetaAsync === 'function')
+        ? getSpaceMetaAsync()
+        : Promise.resolve(null);
+
+    metaPromise.then(function() {
+        // 2. meta 已缓存，此时 getSpaceMeta() 能返回云端数据（如果有的话）
+        if (typeof initCloudSync === 'function') {
+            return initCloudSync();
         }
-        // 触发自定义事件，通知页面数据已就绪
+        return Promise.resolve({ from: 'local' });
+    }).then(function(result) {
+        window._cloudSynced = true;
         var event = new CustomEvent('cloudDataReady', { detail: result });
         document.dispatchEvent(event);
     }).catch(function() {
         window._cloudSynced = true;
-        console.warn('[Sync] 云端同步跳过，使用本地数据');
         var event = new CustomEvent('cloudDataReady', { detail: { from: 'local' } });
         document.dispatchEvent(event);
     });
+}
+
+if (typeof initCloudSync === 'function') {
+    _autoCloudSync();
 } else {
     window._cloudSynced = true;
 }
